@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+
+<head>
+  <title>History</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery.dataTables.min.css') }}">
+  <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/jquery.dataTables.min.js') }}"></script>
+
+
+  <style>
+    body {
+      background-color: lightgray;
+    }
+
+    .footer {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      text-align: center;
+      background-color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand ms-2" style="color: #00e5ff" href="#">Admin</a>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto ms-3 mb-2 mb-lg-0">
+            <li class="nav-item me-4">
+              <a class="nav-link active" style="color: #f50057" href="{{url_for('video')}}">Trang chủ</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div>
+      <style>
+        #dataTable_wrapper {background-color: white !important; padding: 20px 50px !important;}
+      </style>
+
+      <!-- style="background-color: white; padding: 20px 50px;" -->
+      <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Tên Chủ Xe</th>
+            <th>Biển số xe</th>
+            <th>Giờ vào</th>
+            <th>Giờ ra</th>
+
+          </tr>
+        </thead>
+
+        <tbody>
+          {%for data in data %}
+          <tr>
+            <td>{{data.id}}</td>
+            <td>{{data.name}}</td>
+            <td>{{data.license_phate}}</td>
+            <td>{{ data.formatted_checkin if data.formatted_checkin else 'N/A' }}</td>
+            <td>{{data.formatted_checkout}}</td>
+
+          </tr>
+{%endfor%}
+        </tbody>
+      </table>
+      <script>
+        $(document).ready(function () {
+          jQuery.noConflict();
+          // console.log(1111);
+          $('#dataTable').DataTable({});
+        });
+      </script>
+
+</body>
+<script type="text/javascript" src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.5.1.min.js') }}"></script>
+
+<br>
+<footer class="footer">
+  <div class="text-center p-3">
+    Hệ thống quản lý xe ra vào KMA
+  </div>
+</footer>
+
+</html>
