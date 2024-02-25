@@ -74,7 +74,7 @@
         <div class="row gy-4">
 
           <div class="col-lg-8">
-            <img src="http://192.168.226.121:8080/?action=stream" alt=""
+            <img src="http://192.168.1.107:8080/?action=stream" alt=""
               style="height: 480px; width: 640px;     margin-left: 120px;    border-radius: 10px;">
           </div>
 
@@ -112,6 +112,15 @@
   var defaultValue = "{{text}}";
   licensePlateInput.value = defaultValue;
   var enteredText = licensePlateInput.value;
+</script>
+<script>
+  $(document).ready(function() {
+      // Gửi yêu cầu AJAX để nhận văn bản từ Flask server
+      $.get("/api/video", function(data) {
+          // Hiển thị văn bản nhận được trong input
+          $("#license-plate-input").val(data.text);
+      });
+  });
 </script>
 <script src="{{ url_for('static', filename='/vendor/purecounter/purecounter_vanilla.js') }}"></script>
 <script src="{{ url_for('static', filename='/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
