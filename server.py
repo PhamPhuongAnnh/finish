@@ -133,38 +133,18 @@ def register():
 def index():
     return render_template('index.html')
 
-# Mã Server - app.py
 @app.route('/api/video')
 def video():
     reader = easyocr.Reader(['en'], gpu=False)
     model = YOLO('best.pt')
-    img_url = "http://192.168.1.107:8080/?action=snapshot.jpg"  
+    img_url = "http://192.168.2.102:8080/?action=snapshot.jpg"  
     response = requests.get(img_url, auth=('pi', '1'))
     img_array = np.array(bytearray(response.content), dtype=np.uint8)
     image = cv2.imdecode(img_array, -1)
-    results = model(image)
-    boxes = results[0].boxes
-    mytext = ""
-    newtext = ""
-    if boxes.shape[0] > 0:
-        x_min = int(boxes.xyxy[0][0])
-        y_min = int(boxes.xyxy[0][1])
-        x_max = int(boxes.xyxy[0][2])
-        y_max = int(boxes.xyxy[0][3])
-        cropped_image = image[y_min:y_max, x_min:x_max]
-        cv2.imwrite("static/cropped_image.jpg", cropped_image)
-        gray_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
-
-        kq = reader.readtext(gray_image)
-        for (bbox, text, prob) in kq:
-            print(f"Văn bản: {text}, Độ chắc chắn: {prob:.2f}")
-            mytext += text
-        
-    filtered_string = re.sub(r'[^A-Za-z0-9]', '', mytext)
-    print(filtered_string)
+    filtered_string = process_image(reader, model, image)
     
     if filtered_string:
-        send_signal_to_raspi(license_plate=filtered_string, text=mytext)
+        send_text_and_signal_to_raspi(license_plate=filtered_string)
         result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
         local = datetime.now()
         print("Local:", local.strftime("%m/%d/%Y, %H:%M:%S"))
@@ -182,18 +162,37 @@ def video():
 
     return render_template('video.html', text=filtered_string)
 
-def licenes_plate(image_url):
-     
+def process_image(reader, model, image):
+    mytext = ""
+    results = model(image)
+    boxes = results[0].boxes
 
+    if boxes.shape[0] > 0:
+        x_min = int(boxes.xyxy[0][0])
+        y_min = int(boxes.xyxy[0][1])
+        x_max = int(boxes.xyxy[0][2])
+        y_max = int(boxes.xyxy[0][3])
+        cropped_image = image[y_min:y_max, x_min:x_max]
+        cv2.imwrite("static/cropped_image.jpg", cropped_image)
+        gray_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+
+        kq = reader.readtext(gray_image)
+        for (bbox, text, prob) in kq:
+            print(f"Văn bản: {text}, Độ chắc chắn: {prob:.2f}")
+            mytext += text
+        
+    filtered_string = re.sub(r'[^A-Za-z0-9]', '', mytext)
+    print(filtered_string)
+    return filtered_string
 # Trong app.py trên máy chủ
-def send_text_and_signal_to_raspi(filtered_string):
-    if filtered_string:
-        send_text_to_raspi(filtered_string)
-        send_signal_to_raspi(filtered_string)
+def send_text_and_signal_to_raspi(license_plate):
+    if license_plate:
+        send_text_to_raspi(license_plate)
+        send_signal_to_raspi(license_plate)
 
 def send_text_to_raspi(filtered_string):
     if filtered_string:
-        raspi_ip = '192.168.1.107'
+        raspi_ip = '192.168.2.102'
         raspi_url = f'http://{raspi_ip}:5001/receive_text'  # Route trên Flask ứng dụng trên RasPi để nhận văn bản
         data = {'filtered_string': filtered_string}
         response = requests.post(raspi_url, json=data)
@@ -202,11 +201,11 @@ def send_text_to_raspi(filtered_string):
         else:
             print('Không thể gửi văn bản đến RasPi')
 
-def send_signal_to_raspi(license_plate, text):
+def send_signal_to_raspi(license_plate):
     if license_plate:
-        raspi_ip = '192.168.1.107'
+        raspi_ip = '192.168.2.102'
         raspi_url = f'http://{raspi_ip}:5001/control_servo'
-        data = {'license_plate': license_plate, 'text': text}
+        data = {'license_plate': license_plate}
         response = requests.post(raspi_url, json=data)
         if response.status_code == 200:
             print('Tín hiệu đã được gửi đến RasPi thành công')
