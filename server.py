@@ -133,18 +133,28 @@ def register():
 def index():
     return render_template('index.html')
 
+@app.route('/open', methods=['POST'])
+def open_servo():
+    print("Open servo")
+    return {'status': 'success'}
+
+@app.route('/close', methods=['POST'])
+def close_servo():
+    print("Close servo")
+    return {'status': 'success'}
+
+
 @app.route('/api/video')
 def video():
     reader = easyocr.Reader(['en'], gpu=False)
     model = YOLO('best.pt')
-    img_url = "http://192.168.2.102:8080/?action=snapshot.jpg"  
+    img_url = "http://192.168.2.101:8080/?action=snapshot.jpg"  
     response = requests.get(img_url, auth=('pi', '1'))
     img_array = np.array(bytearray(response.content), dtype=np.uint8)
     image = cv2.imdecode(img_array, -1)
     filtered_string = process_image(reader, model, image)
     
     if filtered_string:
-        send_text_and_signal_to_raspi(license_plate=filtered_string)
         result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
         local = datetime.now()
         print("Local:", local.strftime("%m/%d/%Y, %H:%M:%S"))
@@ -162,6 +172,25 @@ def video():
 
     return render_template('video.html', text=filtered_string)
 
+def rotate_image(image, x_min, y_min, x_max, y_max):
+    # Tính toán tâm của biển số xe
+    center_x = (x_min + x_max) // 2
+    center_y = (y_min + y_max) // 2
+
+    # Tính toán góc xoay dựa trên vị trí của các điểm
+    angle = np.arctan2(y_max - y_min, x_max - x_min) * 180 / np.pi  
+
+    # Lấy kích thước của ảnh
+    height, width = image.shape[:2]
+
+    # Tạo ma trận biến đổi xoay
+    rotation_matrix = cv2.getRotationMatrix2D((center_x, center_y), angle, 1)
+
+    # Thực hiện xoay ảnh
+    rotated_image = cv2.warpAffine(image, rotation_matrix, (width, height))
+
+    return rotated_image
+
 def process_image(reader, model, image):
     mytext = ""
     results = model(image)
@@ -172,7 +201,8 @@ def process_image(reader, model, image):
         y_min = int(boxes.xyxy[0][1])
         x_max = int(boxes.xyxy[0][2])
         y_max = int(boxes.xyxy[0][3])
-        cropped_image = image[y_min:y_max, x_min:x_max]
+        rotated_image = rotate_image(image, x_min, y_min, x_max, y_max)
+        cropped_image = rotated_image[y_min:y_max, x_min:x_max]
         cv2.imwrite("static/cropped_image.jpg", cropped_image)
         gray_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
 
@@ -181,37 +211,12 @@ def process_image(reader, model, image):
             print(f"Văn bản: {text}, Độ chắc chắn: {prob:.2f}")
             mytext += text
         
-    filtered_string = re.sub(r'[^A-Za-z0-9]', '', mytext)
+    filtered_string = re.sub(r'[^A-Za-z0-9]',    '', mytext)
     print(filtered_string)
     return filtered_string
 # Trong app.py trên máy chủ
-def send_text_and_signal_to_raspi(license_plate):
-    if license_plate:
-        send_text_to_raspi(license_plate)
-        send_signal_to_raspi(license_plate)
 
-def send_text_to_raspi(filtered_string):
-    if filtered_string:
-        raspi_ip = '192.168.2.102'
-        raspi_url = f'http://{raspi_ip}:5001/receive_text'  # Route trên Flask ứng dụng trên RasPi để nhận văn bản
-        data = {'filtered_string': filtered_string}
-        response = requests.post(raspi_url, json=data)
-        if response.status_code == 200:
-            print('Văn bản đã được gửi đến RasPi thành công')
-        else:
-            print('Không thể gửi văn bản đến RasPi')
 
-def send_signal_to_raspi(license_plate):
-    if license_plate:
-        raspi_ip = '192.168.2.102'
-        raspi_url = f'http://{raspi_ip}:5001/control_servo'
-        data = {'license_plate': license_plate}
-        response = requests.post(raspi_url, json=data)
-        if response.status_code == 200:
-            print('Tín hiệu đã được gửi đến RasPi thành công')
-            # return render_template('video.html', text=license_plate)
-        else:
-            print('Không thể gửi tín hiệu đến RasPi')
 
 @app.route('/videoplayback')
 def videoplayback():
