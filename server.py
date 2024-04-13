@@ -144,16 +144,16 @@ def close_servo():
     return {'status': 'success'}
 
 
-@app.route('/api/video')
+@app.route('/api/video', methods=['GET', 'POST'])
 def video():
     reader = easyocr.Reader(['en'], gpu=False)
     model = YOLO('best.pt')
-    img_url = "http://192.168.2.101:8080/?action=snapshot.jpg"  
+    img_url = "http://192.168.2.105:8080/?action=snapshot.jpg"  
     response = requests.get(img_url, auth=('pi', '1'))
     img_array = np.array(bytearray(response.content), dtype=np.uint8)
     image = cv2.imdecode(img_array, -1)
     filtered_string = process_image(reader, model, image)
-    
+    send_text_and_signal_to_raspi(filtered_string)
     if filtered_string:
         result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
         local = datetime.now()
@@ -169,27 +169,47 @@ def video():
 
         # Lưu các thay đổi vào cơ sở dữ liệu
         db.session.commit()
+        
+        # Gửi filtered_string sang Raspberry Pi
+       
 
     return render_template('video.html', text=filtered_string)
 
+def send_text_and_signal_to_raspi(license_plate):
+    if license_plate:
+        send_text_to_raspi(license_plate)
+
+def send_text_to_raspi(filtered_string):
+    if filtered_string:
+        # raspi_ip = '192.168.1.149'
+        raspi_ip = '192.168.2.105'
+        
+        raspi_url = f'http://{raspi_ip}:5001/receive_text'  # Route trên Flask ứng dụng trên RasPi để nhận văn bản
+        data = {'filtered_string': filtered_string}
+        response = requests.post(raspi_url, json=data)
+        if response.status_code == 200:
+            print('Văn bản đã được gửi đến RasPi thành công')
+        else:
+            print('Không thể gửi văn bản đến RasPi')
+
 def rotate_image(image, x_min, y_min, x_max, y_max):
-    # Tính toán tâm của biển số xe
-    center_x = (x_min + x_max) // 2
-    center_y = (y_min + y_max) // 2
+    # # Tính toán tâm của biển số xe
+    # center_x = (x_min + x_max) // 2
+    # center_y = (y_min + y_max) // 2
 
-    # Tính toán góc xoay dựa trên vị trí của các điểm
-    angle = np.arctan2(y_max - y_min, x_max - x_min) * 180 / np.pi  
+    # # Tính toán góc xoay dựa trên vị trí của các điểm
+    # angle = np.arctan2(y_max - y_min, x_max - x_min) * 180 / np.pi
 
-    # Lấy kích thước của ảnh
-    height, width = image.shape[:2]
+    # # Lấy kích thước của ảnh
+    # height, width = image.shape[:2]
 
-    # Tạo ma trận biến đổi xoay
-    rotation_matrix = cv2.getRotationMatrix2D((center_x, center_y), angle, 1)
+    # # Tạo ma trận biến đổi xoay
+    # rotation_matrix = cv2.getRotationMatrix2D((center_x, center_y), angle, 1)
 
-    # Thực hiện xoay ảnh
-    rotated_image = cv2.warpAffine(image, rotation_matrix, (width, height))
+    # # Thực hiện xoay ảnh
+    # rotated_image = cv2.warpAffine(image, rotation_matrix, (width, height))
 
-    return rotated_image
+    return image
 
 def process_image(reader, model, image):
     mytext = ""
