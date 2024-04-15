@@ -64,7 +64,8 @@ def receive_filtered_string():
     if filtered_string:
         # Xử lý filtered_string ở đây
         print("Filtered string received:", filtered_string)
-
+        lcd.printline(0, '                             ')
+        lcd.printline(1, '                             ')
         lcd.printline(0, 'Bien So Xe: ')
 
         lcd.printline(1, filtered_string)

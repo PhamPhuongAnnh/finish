@@ -74,7 +74,7 @@
         <div class="row gy-4">
 
           <div class="col-lg-8">
-            <img src="http://192.168.2.105:8080/?action=stream" alt=""
+            <img src="http://192.168.1.132:8080/?action=stream" alt=""
               style="height: 480px; width: 640px;     margin-left: 120px;    border-radius: 10px;">
           </div>
 
@@ -116,14 +116,14 @@
   $(document).ready(function () {
     // Gửi yêu cầu AJAX để nhận văn bản từ Flask server
     $.get("/api/video", function (data) {
-      // Hiển thị văn bản nhận được trong input
+      // Hiển thị văn bản nhận được trong inputd
       $("#license-plate-input").val(data.text);
     });
   });
 
   function openServo() {
     // alert('Mở cửa thành công');
-    fetch('http://192.168.2.105:5001/open', {
+    fetch('http://192.168.1.132:5001/open', {
       method: 'POST'
     });
   }
@@ -131,7 +131,7 @@
   function closeServo() {
     
     // alert('Đóng cửa thành công');
-    fetch('http://192.168.2.105:5001/close', {
+    fetch('http://192.168.1.132:5001/close', {
       method: 'POST'
     });
   }

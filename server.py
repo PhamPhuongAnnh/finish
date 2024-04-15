@@ -16,23 +16,18 @@ import pytz
 import re
 from flask_caching import Cache
 from flask_lazyviews import LazyViews
+import array as arr 
 # _______________________________Khai báo__________________________________________________________________
 
-app = Flask(__name__,static_folder='static')
-# executor = ThreadPoolExecutor(max_workers=2)                
+app = Flask(__name__,static_folder='static')               
 app.config['SECRET_KEY'] = '8sfkahf0-qdqb82hd'
-#login
 login = LoginManager(app=app)
-#Database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///license.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 user = None
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
-# Tạo đối tượng LazyViews
 lazyviews = LazyViews(app)
-
-
 class User(db.Model, UserMixin):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key = True, autoincrement=True)
@@ -42,7 +37,6 @@ class User(db.Model, UserMixin):
     def __init__(self, name, license_phate):
         self.name = name
         self.license_phate = license_phate
-
 class Admin(db.Model):
     __tablename__ = "admin"
     id = db.Column(db.Integer, primary_key = True, autoincrement=True)
@@ -68,8 +62,6 @@ class Manager(db.Model):
         self.license_phate = license_phate
         self.checkin = checkin
         self.checkout = checkout
-
-# Gọi db.create_all() trong ngữ cảnh ứng dụng
 with app.app_context():
     db.create_all()
 # ______________________________API_______________________________________________________________________
@@ -146,13 +138,14 @@ def close_servo():
 
 @app.route('/api/video', methods=['GET', 'POST'])
 def video():
-    reader = easyocr.Reader(['en'], gpu=False)
     model = YOLO('best.pt')
-    img_url = "http://192.168.2.105:8080/?action=snapshot.jpg"  
+    img_url = "http://192.168.1.132:8080/?action=snapshot.jpg"  
+    
     response = requests.get(img_url, auth=('pi', '1'))
     img_array = np.array(bytearray(response.content), dtype=np.uint8)
     image = cv2.imdecode(img_array, -1)
-    filtered_string = process_image(reader, model, image)
+    
+    filtered_string = process_image(model, image)
     send_text_and_signal_to_raspi(filtered_string)
     if filtered_string:
         result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
@@ -167,10 +160,8 @@ def video():
         else:   
             result.checkout = datetime_VN
 
-        # Lưu các thay đổi vào cơ sở dữ liệu
         db.session.commit()
         
-        # Gửi filtered_string sang Raspberry Pi
        
 
     return render_template('video.html', text=filtered_string)
@@ -181,60 +172,135 @@ def send_text_and_signal_to_raspi(license_plate):
 
 def send_text_to_raspi(filtered_string):
     if filtered_string:
-        # raspi_ip = '192.168.1.149'
-        raspi_ip = '192.168.2.105'
+        raspi_ip = '192.168.1.132'
         
-        raspi_url = f'http://{raspi_ip}:5001/receive_text'  # Route trên Flask ứng dụng trên RasPi để nhận văn bản
+        raspi_url = f'http://{raspi_ip}:5001/receive_text'  
         data = {'filtered_string': filtered_string}
         response = requests.post(raspi_url, json=data)
         if response.status_code == 200:
             print('Văn bản đã được gửi đến RasPi thành công')
         else:
             print('Không thể gửi văn bản đến RasPi')
-
-def rotate_image(image, x_min, y_min, x_max, y_max):
-    # # Tính toán tâm của biển số xe
-    # center_x = (x_min + x_max) // 2
-    # center_y = (y_min + y_max) // 2
-
-    # # Tính toán góc xoay dựa trên vị trí của các điểm
-    # angle = np.arctan2(y_max - y_min, x_max - x_min) * 180 / np.pi
-
-    # # Lấy kích thước của ảnh
-    # height, width = image.shape[:2]
-
-    # # Tạo ma trận biến đổi xoay
-    # rotation_matrix = cv2.getRotationMatrix2D((center_x, center_y), angle, 1)
-
-    # # Thực hiện xoay ảnh
-    # rotated_image = cv2.warpAffine(image, rotation_matrix, (width, height))
-
-    return image
-
-def process_image(reader, model, image):
+def process_image(model, image):
     mytext = ""
     results = model(image)
     boxes = results[0].boxes
+    image_model = YOLO('best1.pt')
 
     if boxes.shape[0] > 0:
         x_min = int(boxes.xyxy[0][0])
         y_min = int(boxes.xyxy[0][1])
         x_max = int(boxes.xyxy[0][2])
         y_max = int(boxes.xyxy[0][3])
-        rotated_image = rotate_image(image, x_min, y_min, x_max, y_max)
-        cropped_image = rotated_image[y_min:y_max, x_min:x_max]
+        cropped_image = image[y_min:y_max, x_min:x_max]
+        results  = image_model.predict(cropped_image)
         cv2.imwrite("static/cropped_image.jpg", cropped_image)
         gray_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
-
-        kq = reader.readtext(gray_image)
-        for (bbox, text, prob) in kq:
-            print(f"Văn bản: {text}, Độ chắc chắn: {prob:.2f}")
-            mytext += text
+        image_results = image_model(cropped_image) 
+        print(image_results)
+        # Extract bounding boxes, classes, names, and confidences
         
-    filtered_string = re.sub(r'[^A-Za-z0-9]',    '', mytext)
-    print(filtered_string)
-    return filtered_string
-# Trong app.py trên máy chủ
+        boxes = results[0].boxes.xyxy.tolist()
+        classes = results[0].boxes.cls.tolist()
+        names = results[0].names
+        confidences = results[0].boxes.conf.tolist()
+        a = []
+        for _ in range(15):
+            hang = [0] * 3  # Create a row containing 3 elements with value 0
+            a.append(hang)
+
+        row = 0 
+        for box, cls, conf in zip(boxes, classes, confidences):
+            x1, y1, x2, y2 = box
+            confidence = conf
+            detected_class = cls
+            name = names[int(cls)]
+            a[row][0] = x1
+            a[row][1] = y1
+            a[row][2] = detected_class
+            row += 1
+        for i in range(row):
+            print(f"{a[i][0]} x {a[i][1]} x {a[i][2]}")
+        print(f"row: {row}")
+        line1 = [15]*row
+        line2 = [15]*row
+        visit = [15]*row
+        for i in range(row): 
+            line1[i] = 10000
+            line2[i] = 10000
+            visit[i] = 0
+
+        check = 0
+        for i in range(row): 
+            if(visit[i] == 0):
+                check = i
+            for j in range(row):
+                if(visit[j] == 0):
+                    visit[j] = 1
+                    if(a[check][1] - 10 < a[j][1]):
+                        line1.append(j)
+                    else:
+                        line2.append(j)
+        print(line1)
+        print(line2)
+        for i in range(len(line1)-1):
+            for j in range(i + 1, len(line1)):
+                # print("---------------------1")
+                # print(f"{line1[i]}x {line1[j]}")
+                if(line1[i] != 10000):
+                    
+                    if a[line1[i]][0] > a[line1[j]][0]:
+                        # Swap elements if condition is true
+                        tem = line1[i]
+                        line1[i] = line1[j]
+                        line1[j] = tem
+        for i in range(len(line2)-1):
+            for j in range(i + 1, len(line2)):
+                if(line2[i] != 10000):
+                    if a[line2[i]][0] > a[line2[j]][0]:
+                        # Swap elements if condition is true
+                        tem = line2[i]
+                        line2[i] = line2[j]
+                        line2[j] = tem
+        for i in range(len(line2)):
+            if(line2[i] != 10000):
+                mytext += names[a[line2[i]][2]]
+        for i in range(len(line1)):
+            if(line1[i] != 10000):
+                mytext += names[a[line1[i]][2]]
+            
+        print(mytext)
+        print(line1)
+        print(line2)
+        # if(len(line2) == 0):
+        #     for i in range(row):
+        #         for j in range(row):
+        #             if(a[i][1] < a[j][1]):
+        #                     tem = a[i][0]
+        #                     a[i][0] = a[j][0]
+        #                     a[j][0] = tem
+        #                     tem = a[i][1]
+        #                     a[i][1] = a[j][1]
+        #                     a[j][1] = tem
+        #                     tem = a[i][2]
+        #                     a[i][2] = a[j][2]
+        #                     a[j][2] = tem
+        #     for i in range(row):
+        #         for j in range(row):
+        #             if(a[i][0] < a[j][0]):
+        #                     tem = a[i][0]
+        #                     a[i][0] = a[j][0]
+        #                     a[j][0] = tem
+        #                     tem = a[i][1]
+        #                     a[i][1] = a[j][1]
+        #                     a[j][1] = tem
+        #                     tem = a[i][2]
+        #                     a[i][2] = a[j][2]
+        #                     a[j][2] = tem
+        #     for i in range(row):
+        #         print(f"{a[i][0]} x {a[i][1]} x {a[i][2]}")
+    print(mytext)
+    return mytext
 
 
 
