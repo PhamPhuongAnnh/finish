@@ -17,6 +17,11 @@ import re
 from flask_caching import Cache
 from flask_lazyviews import LazyViews
 import array as arr 
+import logging
+from io import StringIO
+import csv
+from flask import make_response
+
 # _______________________________Khai báo__________________________________________________________________
 
 app = Flask(__name__,static_folder='static')               
@@ -30,13 +35,15 @@ cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 lazyviews = LazyViews(app)
 class User(db.Model, UserMixin):
     __tablename__ = "user"
-    id = db.Column(db.Integer, primary_key = True, autoincrement=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(50), nullable=False)
     license_phate = db.Column(db.String(50), nullable=False)
+    department = db.Column(db.String(50))  # Thêm cột department
 
-    def __init__(self, name, license_phate):
+    def __init__(self, name, license_phate, department):  # Cập nhật hàm khởi tạo
         self.name = name
         self.license_phate = license_phate
+        self.department = department
 class Admin(db.Model):
     __tablename__ = "admin"
     id = db.Column(db.Integer, primary_key = True, autoincrement=True)
@@ -57,7 +64,6 @@ class Manager(db.Model):
     license_phate = db.Column(db.String(50), nullable=False)
     checkin=db.Column(db.DateTime, nullable=True)
     checkout=db.Column(db.DateTime, nullable=True)
-    
     def __init__(self, license_phate, checkin=None, checkout=None):
         self.license_phate = license_phate
         self.checkin = checkin
@@ -98,7 +104,7 @@ def logout():
 def admin():
     global user
     users = User.query.all()
-    return render_template('admin.html', users = users)
+    return render_template('user.html', users = users)
 
 
 @app.route('/deleteuser/<int:id>')
@@ -107,18 +113,18 @@ def deleteuser(id):
     User.query.filter_by(id=id).delete()
     db.session.commit()
     users = User.query.all()
-    return render_template('admin.html', users = users)
+    return render_template('user.html', users = users)
 
-@app.route('/register', methods = ["POST"])
+@app.route('/register', methods=["POST"])
 def register():
-    global user
     name = request.form.get("username")
-    license_phate = request.form.get("licenes-plates")
-    re = User(name,license_phate)
+    license_phate = request.form.get("license-plates")
+    department = request.form.get("department")
+    re = User(name=name, license_phate=license_phate, department=department)
     db.session.add(re)
     db.session.commit()
     users = User.query.all()
-    return render_template('admin.html',users = users)
+    return render_template('user.html', users=users)
 
 
 @app.route('/')
@@ -138,17 +144,25 @@ def close_servo():
 
 @app.route('/api/video', methods=['GET', 'POST'])
 def video():
+    total_spaces = 100
+    parked_cars = Manager.query.filter_by(checkout=None).count()
+    available_spaces = total_spaces - parked_cars
     model = YOLO('best.pt')
-    img_url = "http://192.168.1.132:8080/?action=snapshot.jpg"  
+    # img_url = "http://192.168.1.132:8080/?action=snapshot.jpg"  
+   
     
-    response = requests.get(img_url, auth=('pi', '1'))
-    img_array = np.array(bytearray(response.content), dtype=np.uint8)
-    image = cv2.imdecode(img_array, -1)
-    
+    # response = requests.get(img_url, auth=('pi', '1'))
+    # img_array = np.array(bytearray(response.content), dtype=np.uint8)
+    # image = cv2.imdecode(img_array, -1)
+
+    image_path = "d:\\finish\\1.jpg"
+    image = cv2.imread(image_path)
     filtered_string = process_image(model, image)
-    send_text_and_signal_to_raspi(filtered_string)
+    # send_text_and_signal_to_raspi(filtered_string)
     if filtered_string:
+        # result = Manager.query.filter(xManager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
         result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
+
         local = datetime.now()
         print("Local:", local.strftime("%m/%d/%Y, %H:%M:%S"))
         tz_VN = pytz.timezone('Asia/Ho_Chi_Minh') 
@@ -164,23 +178,24 @@ def video():
         
        
 
-    return render_template('video.html', text=filtered_string)
+    return render_template('test.html',spaces =  available_spaces, text=filtered_string)
 
-def send_text_and_signal_to_raspi(license_plate):
-    if license_plate:
-        send_text_to_raspi(license_plate)
+# def send_text_and_signal_to_raspi(license_plate):
+#     if license_plate:
+#         send_text_to_raspi(license_plate)
 
-def send_text_to_raspi(filtered_string):
-    if filtered_string:
-        raspi_ip = '192.168.1.132'
+# def send_text_to_raspi(filtered_string):
+#     if filtered_string:
+#         raspi_ip = '192.168.1.132'
         
-        raspi_url = f'http://{raspi_ip}:5001/receive_text'  
-        data = {'filtered_string': filtered_string}
-        response = requests.post(raspi_url, json=data)
-        if response.status_code == 200:
-            print('Văn bản đã được gửi đến RasPi thành công')
-        else:
-            print('Không thể gửi văn bản đến RasPi')
+#         raspi_url = f'http://{raspi_ip}:5001/receive_text'  
+#         data = {'filtered_string': filtered_string}
+#         response = requests.post(raspi_url, json=data)
+#         if response.status_code == 200:
+#             print('Văn bản đã được gửi đến RasPi thành công')
+#         else:
+#             print('Không thể gửi văn bản đến RasPi')
+
 def process_image(model, image):
     mytext = ""
     results = model(image)
@@ -248,7 +263,6 @@ def process_image(model, image):
                 # print("---------------------1")
                 # print(f"{line1[i]}x {line1[j]}")
                 if(line1[i] != 10000):
-                    
                     if a[line1[i]][0] > a[line1[j]][0]:
                         # Swap elements if condition is true
                         tem = line1[i]
@@ -272,33 +286,6 @@ def process_image(model, image):
         print(mytext)
         print(line1)
         print(line2)
-        # if(len(line2) == 0):
-        #     for i in range(row):
-        #         for j in range(row):
-        #             if(a[i][1] < a[j][1]):
-        #                     tem = a[i][0]
-        #                     a[i][0] = a[j][0]
-        #                     a[j][0] = tem
-        #                     tem = a[i][1]
-        #                     a[i][1] = a[j][1]
-        #                     a[j][1] = tem
-        #                     tem = a[i][2]
-        #                     a[i][2] = a[j][2]
-        #                     a[j][2] = tem
-        #     for i in range(row):
-        #         for j in range(row):
-        #             if(a[i][0] < a[j][0]):
-        #                     tem = a[i][0]
-        #                     a[i][0] = a[j][0]
-        #                     a[j][0] = tem
-        #                     tem = a[i][1]
-        #                     a[i][1] = a[j][1]
-        #                     a[j][1] = tem
-        #                     tem = a[i][2]
-        #                     a[i][2] = a[j][2]
-        #                     a[j][2] = tem
-        #     for i in range(row):
-        #         print(f"{a[i][0]} x {a[i][1]} x {a[i][2]}")
     print(mytext)
     return mytext
 
@@ -308,15 +295,67 @@ def process_image(model, image):
 def videoplayback():
     global data
     data = db.session.query(
-    User.name,
-    User.license_phate,
-    Manager.id,
-   
-    func.strftime('%Y-%m-%d %H:%M:%S', Manager.checkout).label('formatted_checkout'),
-    func.strftime('%Y-%m-%d %H:%M:%S', Manager.checkin).label('formatted_checkin')
+        User.name,
+        User.license_phate,
+        User.department,  # Thêm cột department vào câu truy vấn
+        Manager.id,
+        func.strftime('%Y-%m-%d %H:%M:%S', Manager.checkout).label('formatted_checkout'),
+        func.strftime('%Y-%m-%d %H:%M:%S', Manager.checkin).label('formatted_checkin')
+    ).join(Manager, User.license_phate == Manager.license_phate).all()
+    return render_template('table.html', data=data)
 
-).join(User, User.license_phate == Manager.license_phate).all()
-    return render_template('videoplayback.html',data= data)
+
+@app.route('/download/<table>', methods=['GET'])
+def download_csv(table):
+    try:
+        # Ghi log để theo dõi quá trình xử lý yêu cầu tải tệp CSV
+        logging.info(f'Request to download CSV for table: {table}')
+        
+        # Tạo một biến lưu trữ dữ liệu CSV
+        csv_data = StringIO()
+        csv_writer = csv.writer(csv_data, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+        # Kiểm tra bảng được yêu cầu và truy vấn dữ liệu từ cơ sở dữ liệu
+        if table == 'manage':
+            data = Manager.query.all()
+            # Ghi dữ liệu vào file CSV
+            csv_writer.writerow(['ID', 'License Plates', 'Checkin', 'Checkout'])
+            for item in data:
+                csv_writer.writerow([item.id, item.license_phate, item.checkin, item.checkout])
+
+        elif table == 'user':
+            data = User.query.all()
+            # Ghi dữ liệu vào file CSV
+            csv_writer.writerow(['ID', 'Name', 'License Plates', 'Department'])
+            for item in data:
+                csv_writer.writerow([item.id, item.name, item.license_phate, item.department])
+        elif table == 'in_and_out':
+            data = db.session.query(
+                Manager.id,
+                User.name,
+                User.department,
+                Manager.license_phate,
+                Manager.checkin,
+                Manager.checkout,
+            ).join(Manager, User.license_phate == Manager.license_phate).all()
+            # Ghi dữ liệu vào file CSV
+            csv_writer.writerow(['ID', 'Name' , 'Department','License Plates', 'Checkin', 'Checkout'])
+            for item in data:
+                csv_writer.writerow([item.id,item.name , item.department, item.license_phate, item.checkin, item.checkout])
+
+        # Tạo một đối tượng phản hồi chứa dữ liệu CSV
+        response = make_response(csv_data.getvalue())
+        response.headers['Content-Disposition'] = f'attachment; filename={table}.csv'
+        response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
+
+        return response
+
+    except Exception as e:
+        # Ghi log cho bất kỳ ngoại lệ nào xảy ra trong quá trình xử lý yêu cầu
+        logging.error(f'An error occurred: {str(e)}')
+        
+        # Trả về một phản hồi lỗi nếu có lỗi xảy ra
+        return 'An error occurred while processing the request.', 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port=5000,debug=True)

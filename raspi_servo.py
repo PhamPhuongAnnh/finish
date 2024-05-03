@@ -75,7 +75,8 @@ def receive_filtered_string():
 
 if __name__ == '__main__':
     try:
-        # Chạy ứng dụng Flask trên Raspberry Pi trên cổng 5001
+        # Chạy ứng dụng Flask trên Rasp
+        # berry Pi trên cổng 5001
         app_raspi.run(host='0.0.0.0', port=5001, debug=True)
     finally:
         # Dọn dẹp GPIO khi kết thúc chương trình

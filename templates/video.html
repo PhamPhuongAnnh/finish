@@ -73,11 +73,16 @@
 
         <div class="row gy-4">
 
-          <div class="col-lg-8">
+          <!-- <div class="col-lg-8">
             <img src="http://192.168.1.132:8080/?action=stream" alt=""
               style="height: 480px; width: 640px;     margin-left: 120px;    border-radius: 10px;">
+          </div> -->
+          <!-- ....................  -->
+          <div class="col-lg-8">
+            <img id="cameraImage" src="" alt=""
+              style="height: 480px; width: 640px; margin-left: 120px; border-radius: 10px;">
           </div>
-
+          <!-- .................. -->
           <div class="col-lg-4">
             <div>
               <img id="license-image" src="{{ url_for('static', filename='cropped_image.jpg') }}" alt=""
@@ -100,6 +105,21 @@
 </body>
 
 <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var cameraImage = document.getElementById('cameraImage');
+
+    // Truy cập vào camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function (stream) {
+        // Tạo URL cho video stream từ camera
+        var videoURL = window.URL.createObjectURL(stream);
+        // Cập nhật thuộc tính src của thẻ img
+        cameraImage.src = videoURL;
+      })
+      .catch(function (err) {
+        console.log("An error occurred: " + err);
+      });
+  });
   // Function to reload the page every 15 seconds
   function reloadPage() {
     location.reload(true); // True parameter forces a reload from the server, not from the cache
@@ -129,7 +149,7 @@
   }
 
   function closeServo() {
-    
+
     // alert('Đóng cửa thành công');
     fetch('http://192.168.1.132:5001/close', {
       method: 'POST'
