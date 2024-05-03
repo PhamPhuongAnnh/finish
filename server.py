@@ -247,27 +247,29 @@ def process_image(model, image):
 
         check = 0
         for i in range(row): 
-            if(visit[i] == 0):
-                check = i
-            for j in range(row):
-                if(visit[j] == 0):
-                    visit[j] = 1
-                    if(a[check][1] - 10 < a[j][1]):
-                        line1.append(j)
-                    else:
-                        line2.append(j)
+            if(a[i][1]<30):
+                if(visit[i] == 0):
+                    check = i
+                    for j in range(row):
+                        if(visit[j] == 0):
+                            visit[j] = 1
+                            print(f"{a[check][1]} x {a[j][1]}")
+                            if(a[j][1] - a[check][1] <= 20):
+                                line1.append(j)
+                            else:
+                                line2.append(j)
+            
+            
         print(line1)
         print(line2)
         for i in range(len(line1)-1):
             for j in range(i + 1, len(line1)):
-                # print("---------------------1")
-                # print(f"{line1[i]}x {line1[j]}")
                 if(line1[i] != 10000):
                     if a[line1[i]][0] > a[line1[j]][0]:
-                        # Swap elements if condition is true
                         tem = line1[i]
                         line1[i] = line1[j]
                         line1[j] = tem
+                        
         for i in range(len(line2)-1):
             for j in range(i + 1, len(line2)):
                 if(line2[i] != 10000):
@@ -276,13 +278,14 @@ def process_image(model, image):
                         tem = line2[i]
                         line2[i] = line2[j]
                         line2[j] = tem
-        for i in range(len(line2)):
-            if(line2[i] != 10000):
-                mytext += names[a[line2[i]][2]]
+                        
+        
         for i in range(len(line1)):
             if(line1[i] != 10000):
                 mytext += names[a[line1[i]][2]]
-            
+        for i in range(len(line2)):
+            if(line2[i] != 10000):
+                mytext += names[a[line2[i]][2]]
         print(mytext)
         print(line1)
         print(line2)
