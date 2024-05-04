@@ -64,11 +64,14 @@ class Manager(db.Model):
     license_phate = db.Column(db.String(50), nullable=False)
     checkin=db.Column(db.DateTime, nullable=True)
     checkout=db.Column(db.DateTime, nullable=True)
-    
-    def __init__(self, license_phate, checkin=None, checkout=None):
+    license_plate_image_in = db.Column(LargeBinary)
+    license_plate_image_out = db.Column(LargeBinary)
+    def __init__(self, license_phate, checkin=None, checkout=None, license_plate_image_in=None, license_plate_image_out=None):
         self.license_phate = license_phate
         self.checkin = checkin
         self.checkout = checkout
+        self.license_plate_image_in = license_plate_image_in
+        self.license_plate_image_out = license_plate_image_out
 with app.app_context():
     db.create_all()
 # ______________________________API_______________________________________________________________________
@@ -173,10 +176,16 @@ def video():
         datetime_VN = datetime.now(tz_VN)
     
         if result is None:
-            new_record = Manager(license_phate=filtered_string, checkin=datetime_VN)
+            with open("static/cropped_image.jpg", 'rb') as f:
+                image_data = f.read()
+            
+            new_record = Manager(license_phate=filtered_string, checkin=datetime_VN, license_plate_image_in=image_data)
             db.session.add(new_record)
         else:   
+            with open("static/cropped_image.jpg", 'rb') as f:
+                image_data = f.read()
             result.checkout = datetime_VN
+            result.license_plate_image_out = image_data
 
         db.session.commit()
         user = User.query.filter_by(license_phate=filtered_string).first()
@@ -204,6 +213,7 @@ def video():
 #         else:
 #             print('Không thể gửi văn bản đến RasPi')
 
+    
 def process_image(model, image):
     mytext = ""
     results = model(image)
