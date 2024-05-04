@@ -9,7 +9,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>SB Admin 2 - Dashboard</title>
+    <title>Video Stream</title>
 
     <!-- Custom fonts for this template-->
     <link rel="stylesheet" href="{{url_for('static', filename='vendor/fontawesome-free/css/all.min.css')}}">
@@ -81,8 +81,8 @@
 
             <!-- Nav Item - Pages Collapse Menu -->
             <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages"
-                    aria-expanded="true" aria-controls="collapsePages">
+                <a class="nav-link collapsed" href="{{url_for('video')}}" data-toggle="collapse"
+                    data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
                     <i class="fas fa-fw fa-folder"></i>
                     <span>Pages</span>
                 </a>
@@ -90,7 +90,7 @@
 
             <!-- Nav Item - Charts -->
             <li class="nav-item">
-                <a class="nav-link" href="{{url_for('video')}}">
+                <a class="nav-link" href="{{url_for('admin')}}">
                     <i class="fas fa-fw fa-chart-area"></i>
                     <span>User</span></a>
             </li>
@@ -118,11 +118,8 @@
 
         <!-- Content Wrapper -->
         <div id="content-wrapper" class="d-flex flex-column">
-
             <!-- Main Content -->
             <div id="content">
-
-                <!-- Topbar -->
                 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
 
                     <!-- Sidebar Toggle (Topbar) -->
@@ -145,119 +142,136 @@
                     </form>
 
                 </nav>
-                <!-- End of Topbar -->
-
-                <!-- Begin Page Content -->
                 <div class="container-fluid">
                     <!-- Content Row -->
-                    <div class="row" style="display: flex; justify-content: center;">
-
-                        <!-- Earnings (Monthly) Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-primary shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                                Date Time</div>
-                                            <div id="currentDate" class="h5 mb-0 font-weight-bold text-gray-800">
-                                            </div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Earnings (Monthly) Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-success shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                                Available Spaces 
-                                            </div>
-                                        
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                                {{spaces}}
-                                            </div>
-                                        </div>
-
-                                        <div class="col-auto">
-                                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pending Requests Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-warning shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                                Vehicle status</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">Xe {{text}}</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-comments fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Content Row -->
-
                     <div class="row">
-                        <div class="col-xl-6 col-lg-7">
-                            <video id="videoElement" autoplay
-                                style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;"></video>
+                        <div class="col-xl-8">
+                            <div class="row" style="display: flex; justify-content: center; margin-top: 10px;">
+                                <!-- Earnings (Monthly) Card Example -->
+                                <div class="col-xl-5 col-md-6 mb-4">
+                                    <div class="card border-left-primary shadow h-100 py-2">
+                                        <div class="card-body">
+                                            <div class="row no-gutters align-items-center">
+                                                <div class="col mr-2">
+                                                    <div
+                                                        class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                                        Date Time</div>
+                                                    <div id="currentDate"
+                                                        class="h5 mb-0 font-weight-bold text-gray-800">
+                                                    </div>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Earnings (Monthly) Card Example -->
+                                <div class="col-xl-3 col-md-6 mb-4">
+                                    <div class="card border-left-success shadow h-100 py-2">
+                                        <div class="card-body">
+                                            <div class="row no-gutters align-items-center">
+                                                <div class="col mr-2">
+                                                    <div
+                                                        class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                                        Spaces
+                                                    </div>
+
+                                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                        {{spaces}}
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-auto">
+                                                    <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-xl-4 col-md-6 mb-4">
+                                    <div class="card border-left-warning shadow h-100 py-2">
+                                        <div class="card-body">
+                                            <div class="row no-gutters align-items-center">
+                                                <div class="col mr-2">
+                                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                                        Vehicle status</div>
+                                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{text}} Enter</div>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <i class="fas fa-comments fa-2x text-gray-300"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Content Row -->
+
+                            <div class="row ">
+                                <div class="row justify-content-center">
+                                    <div class="col-xl-6 col-lg-6">
+                                        <p>Enntrance gate</p>
+                                        <video id="videoElement" autoplay
+                                            style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;"></video>
+                                    </div>
+                                    <div class="col-xl-6 col-lg-6">
+                                        <p>Exit gate</p>
+                                        <video id="videoElement1" autoplay
+                                            style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;"></video>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="col-xl-6 col-lg-5" style="position: relative;">
-                            <div class="row justify-content-center"> <!-- Thêm lớp justify-content-center -->
-                                <!-- Hàng 1 -->
-                                <div class="col-md-6">
-                                    <img src="{{ url_for('static', filename='cropped_image.jpg') }}" alt="Your Image 1"
-                                        style="width: 100%; height: auto; border: 2px solid #4e73df; border-radius: 10px;">
+                        <div class="col-xl-4  mt-3">
+                            <div class="col-xl-11 justify-content-center">
+                                <div class="card shadow mb-4">
+                                    <!-- Card Header - Dropdown -->
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-white">About Lincese Plate Entered</h6>
+                                    </div>
+                                    <!-- Card Body -->
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-xl-6">
+                                                <p>Enter</p>
+                                                <img src="{{ url_for('static', filename='cropped_image.jpg') }}"
+                                                    alt="Your Image 1"
+                                                    style="width: 100%; height: auto; border: 2px solid #4e73df; border-radius: 10px;">
+                                            </div>
+                                            <div class="col-xl-6">
+                                                <p>Exit</p>
+                                                <img src="{{ url_for('static', filename='cropped_image.jpg') }}"
+                                                    alt="Your Image 2"
+                                                    style="width: 100%; height: auto; border: 2px solid #4e73df; border-radius: 10px;">
+                                            </div>
+                                        </div>
+                                        <div class="row" style="display: block; padding-left: 15px; padding-top: 15px;">
+                                            <p style="color: black; display: block;">ID: NV{{ id }}</p>
+                                            <p style="color: black; display: block;">Name: {{ name }}</p>
+                                            <p style="color: black; display: block;">Department: {{ department }}</p>
+                                            <p style="color: black; display: block;">License plate: {{ text }}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <img src="{{ url_for('static', filename='cropped_image.jpg') }}" alt="Your Image 2"
-                                        style="width: 100%; height: auto; border: 2px solid #4e73df; border-radius: 10px;">
+                                <div class="row justify-content-center" id="buttonRow"
+                                    style="width: 100%; margin-top: 10px; margin-left: 8px;">
+                                    <div class="col-md-6 d-none d-md-block justify-content-center">
+                                        <button type="button" style="margin-top: 10px;"
+                                            class="btn btn-primary btn-block" onclick="openServo()">Open</button>
+                                    </div>
+                                    <div class="col-md-6 d-none d-md-block justify-content-center">
+                                        <button type="button" style="margin-top: 10px;"
+                                            class="btn btn-primary btn-block" onclick="closeServo()">Close</button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="row justify-content-center"> <!-- Thêm lớp justify-content-center -->
-                                <!-- Hàng 2 -->
-                                <div class="col-md-12 d-md-none">
-                                    <button type="button" class="btn btn-primary btn-block">Button 1</button>
-                                </div>
-                                <div class="col-md-12 d-md-none">
-                                    <button type="button" class="btn btn-primary btn-block">Button 2</button>
-                                </div>
-                            </div>
-                            <div class="row justify-content-center" id="buttonRow"
-                                style="width: 100%; margin-top: 10px;">
-                                <!-- Hàng 2 -->
-                                <div class="col-md-6 d-none d-md-block">
-                                    <button type="button" style="margin-top: 10px;" class="btn btn-primary btn-block"
-                                        onclick="openServo()">Open</button>
-                                </div>
-                                <div class="col-md-6 d-none d-md-block">
-                                    <button type="button" style="margin-top: 10px;" class="btn btn-primary btn-block"
-                                        onclick="closeServo()">Close</button>
-                                </div>
-                            </div>
+                            
                         </div>
-
-
                     </div>
+
 
 
                     <!-- Content Row -->
@@ -292,7 +306,7 @@
                     <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                        <a class="btn btn-primary" href="login.html">Logout</a>
+                        <a class="btn btn-primary" href="{{url_for('logout')}}">Logout</a>
                     </div>
                 </div>
             </div>
@@ -331,6 +345,17 @@
             navigator.mediaDevices.getUserMedia({ video: true })
                 .then(function (stream) {
                     var video = document.getElementById('videoElement');
+                    video.srcObject = stream;
+                    video.onloadedmetadata = function (e) {
+                        video.play();
+                    };
+                })
+                .catch(function (err) {
+                    console.log("An error occurred: " + err);
+                });
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    var video = document.getElementById('videoElement1');
                     video.srcObject = stream;
                     video.onloadedmetadata = function (e) {
                         video.play();

@@ -21,7 +21,7 @@ import logging
 from io import StringIO
 import csv
 from flask import make_response
-
+from sqlalchemy import LargeBinary
 # _______________________________Khai báo__________________________________________________________________
 
 app = Flask(__name__,static_folder='static')               
@@ -64,6 +64,7 @@ class Manager(db.Model):
     license_phate = db.Column(db.String(50), nullable=False)
     checkin=db.Column(db.DateTime, nullable=True)
     checkout=db.Column(db.DateTime, nullable=True)
+    
     def __init__(self, license_phate, checkin=None, checkout=None):
         self.license_phate = license_phate
         self.checkin = checkin
@@ -158,6 +159,9 @@ def video():
     image_path = "d:\\finish\\1.jpg"
     image = cv2.imread(image_path)
     filtered_string = process_image(model, image)
+    id = ""
+    name = ""
+    department = "" 
     # send_text_and_signal_to_raspi(filtered_string)
     if filtered_string:
         # result = Manager.query.filter(xManager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
@@ -175,10 +179,14 @@ def video():
             result.checkout = datetime_VN
 
         db.session.commit()
+        user = User.query.filter_by(license_phate=filtered_string).first()
         
-       
-
-    return render_template('test.html',spaces =  available_spaces, text=filtered_string)
+        if user: 
+            id = user.id
+            name = user.name 
+            department = user.department
+            
+    return render_template('test.html',spaces =  available_spaces, text=filtered_string, id = id, name = name, department = department)
 
 # def send_text_and_signal_to_raspi(license_plate):
 #     if license_plate:
@@ -244,7 +252,7 @@ def process_image(model, image):
             line1[i] = 10000
             line2[i] = 10000
             visit[i] = 0
-
+                
         check = 0
         for i in range(row): 
             if(a[i][1]<30):

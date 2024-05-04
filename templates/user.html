@@ -9,7 +9,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>SB Admin 2 - Dashboard</title>
+    <title>User Add</title>
 
     <!-- Custom fonts for this template-->
     <link rel="stylesheet" href="{{url_for('static', filename='vendor/fontawesome-free/css/all.min.css')}}">
@@ -37,6 +37,11 @@
         td {
             width: 20%;
             /* Điều chỉnh độ rộng tùy ý */
+        }
+
+        .even-row {
+            background-color:blanchedalmond;
+            /* Màu nền xám */
         }
     </style>
 </head>
@@ -101,8 +106,8 @@
 
             <!-- Nav Item - Pages Collapse Menu -->
             <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages"
-                    aria-expanded="true" aria-controls="collapsePages">
+                <a class="nav-link collapsed" href="{{url_for('video')}}" data-toggle="collapse"
+                    data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
                     <i class="fas fa-fw fa-folder"></i>
                     <span>Pages</span>
                 </a>
@@ -171,7 +176,7 @@
                                 <table style="text-align: center;" class="table table-bordered" id="dataTable"
                                     width="100%" cellspacing="0">
                                     <thead>
-                                        <tr>
+                                        <tr style="background-color:chocolate; color: white;">
                                             <th>STT</th>
                                             <th>Name</th>
                                             <th>License Plates</th>
@@ -179,15 +184,7 @@
                                             <th>Option</th>
                                         </tr>
                                     </thead>
-                                    <tfoot>
-                                        <tr>
-                                            <th>STT</th>
-                                            <th>Name</th>
-                                            <th>License Plates</th>
-                                            <th>Department</th>
-                                            <th>Option</th>
-                                        </tr>
-                                    </tfoot>
+                                    
                                     <tbody>
                                         <tr>
                                             <form action="{{url_for('register')}}" method="post">
@@ -196,26 +193,32 @@
                                                     <input type="text" name="username" placeholder="Input Name">
                                                 </td>
                                                 <td>
-                                                    <input type="text" name="license-plates" placeholder="Input License Plates">
+                                                    <input type="text" name="license-plates"
+                                                        placeholder="Input License Plates">
                                                 </td>
                                                 <td>
                                                     <input type="text" name="department" placeholder="Input Department">
                                                 </td>
                                                 <td>
-                                                    <button type="submit" class="btn btn-success">Thêm mới</button>
+                                                    <a href="#" type="submit" class="btn btn-success btn-circle">
+                                                        <i class="fas fa-check"></i>
+                                                    </a>
+                                                   
                                                 </td>
                                             </form>
                                         </tr>
 
                                         {% for user in users %}
-                                        <tr>
+                                        <tr {% if loop.index is even %} class="even-row" {% endif %}>
                                             <th>{{user.id}}</th>
                                             <td>{{user.name}}</td>
                                             <td>{{user.license_phate}}</td>
                                             <td>{{user.department}}</td>
                                             <td>
-                                                <a href="{{ url_for('deleteuser', id = user.id) }}"
-                                                    class="btn btn-primary" onclick="return confirmDelete()">Xóa</a>
+                                                <a href="{{ url_for('deleteuser', id = user.id) }}" class="btn btn-danger btn-circle">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            
                                             </td>
                                         </tr>
                                         {%endfor%}
