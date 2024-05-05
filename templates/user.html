@@ -215,7 +215,7 @@
                                             <td>{{user.license_phate}}</td>
                                             <td>{{user.department}}</td>
                                             <td>
-                                                <a href="{{ url_for('deleteuser', id = user.id) }}" onclick="confirmDelete()" class="btn btn-danger btn-circle">
+                                                <a href="{{ url_for('deleteuser', id = user.id) }}" onclick=" return confirmDelete()" class="btn btn-danger btn-circle">
                                                     <i class="fas fa-trash"></i>
                                                 </a>
                                             
