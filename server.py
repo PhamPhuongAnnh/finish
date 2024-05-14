@@ -325,6 +325,28 @@ def videoplayback():
     ).join(Manager, User.license_phate == Manager.license_phate).all()
     return render_template('table.html', data=data)
 
+@app.route('/updateuser/<int:id_edit>', methods=["POST"])
+def updateuser(id_edit):
+    # Lấy thông tin được gửi từ yêu cầu POST
+    name = request.form.get("name")
+    license_phate = request.form.get("licensePlates")
+    department = request.form.get("department")
+
+    # Tìm người dùng trong cơ sở dữ liệu dựa trên ID
+    user = User.query.get(id_edit)
+    if user:
+        # Cập nhật thông tin của người dùng
+        user.name = name
+        user.license_phate = license_phate
+        user.department = department
+
+        # Lưu thay đổi vào cơ sở dữ liệu
+        db.session.commit()
+        # Trả về phản hồi thành công nếu cập nhật thành công
+        return 'User updated successfully'
+    else:
+        # Trả về lỗi nếu không tìm thấy người dùng
+        return 'User not found', 404
 
 @app.route('/download/<table>', methods=['GET'])
 def download_csv(table):

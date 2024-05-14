@@ -40,7 +40,7 @@
         }
 
         .even-row {
-            background-color:blanchedalmond;
+            background-color: blanchedalmond;
             /* Màu nền xám */
         }
     </style>
@@ -184,7 +184,7 @@
                                             <th>Option</th>
                                         </tr>
                                     </thead>
-                                    
+
                                     <tbody>
                                         <tr>
                                             <form action="{{url_for('register')}}" method="post">
@@ -203,7 +203,6 @@
                                                     <button type="submit" class="btn btn-success btn-circle">
                                                         <i class="fas fa-check"></i>
                                                     </button>
-                                                   
                                                 </td>
                                             </form>
                                         </tr>
@@ -215,10 +214,17 @@
                                             <td>{{user.license_phate}}</td>
                                             <td>{{user.department}}</td>
                                             <td>
-                                                <a href="{{ url_for('deleteuser', id = user.id) }}" onclick="confirmDelete()" class="btn btn-danger btn-circle">
+                                                <a href="{{ url_for('deleteuser', id = user.id) }}"
+                                                    onclick=" return confirmDelete()" class="btn btn-danger btn-circle">
                                                     <i class="fas fa-trash"></i>
                                                 </a>
-                                            
+                                                <button class="btn btn-info btn-circle editBtn" data-toggle="modal"
+                                                    data-target="#editModal" data-id="{{user.id}}"
+                                                    data-name="{{user.name}}" data-license="{{user.license_phate}}"
+                                                    data-department="{{user.department}}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+
                                             </td>
                                         </tr>
                                         {%endfor%}
@@ -238,26 +244,50 @@
         </a>
 
         <!-- Logout Modal-->
-        <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        <!-- Modal -->
+        <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
             aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
+                        <h5 class="modal-title" id="exampleModalLabel">Edit User</h5>
                         <button class="close" type="button" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">×</span>
                         </button>
                     </div>
-                    <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
+                    <div class="modal-body">
+                        <form id="editForm">
+                            <div class="form-group">
+                                <label for="name">Name</label>
+                                <input type="text" class="form-control" id="name" name="name">
+                            </div>
+                            <div class="form-group">
+                                <label for="licensePlates">License Plates</label>
+                                <input type="text" class="form-control" id="licensePlates" name="licensePlates">
+                            </div>
+                            <div class="form-group">
+                                <label for="department">Department</label>
+                                <input type="text" class="form-control" id="department" name="department">
+                            </div>
+                            <!-- Hidden input field to store user ID -->
+                            <input type="hidden" id="userId" name="userId">
+                        </form>
+                    </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                        <a class="btn btn-primary" href="login.html">Logout</a>
+                        <button class="btn btn-primary" id="saveChanges">Save Changes</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Bootstrap core JavaScript-->
+        <!-- jQuery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+        <!-- Bootstrap JavaScript -->
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
         <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
         <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
         <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
@@ -271,6 +301,51 @@
 
 
 <script>
+    $(document).ready(function () {
+        $('.editBtn').click(function () {
+            var id = $(this).data('id');
+            var name = $(this).data('name');
+            var license = $(this).data('license');
+            var department = $(this).data('department');
+
+            $('#editModal #userId').val(id); // Lưu ID của người dùng vào trường input ẩn
+            $('#editModal #name').val(name);
+            $('#editModal #licensePlates').val(license);
+            $('#editModal #department').val(department);
+        });
+
+        $('#saveChanges').click(function () {
+            var id_edit = $('#userId').val();
+            var name = $('#name').val();
+            var licensePlates = $('#licensePlates').val();
+            var department = $('#department').val();
+
+            $.ajax({
+                url: '/updateuser/' + id_edit,
+                method: 'POST',
+                data: {
+                    name: name,
+                    licensePlates: licensePlates,
+                    department: department
+                },
+                success: function(response) {
+                    // Xử lý phản hồi từ máy chủ (nếu cần)
+                    console.log(response);
+                    // Gỡ bỏ lớp 'show' từ modal và các phần tử liên quan
+                    $('#editModal').removeClass('show');
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    location.reload();
+                },
+                error: function(error) {
+                    // Xử lý lỗi (nếu có)
+                    console.log(error);
+                }
+            });
+
+            
+        });
+    });
     // Kích hoạt dropdown menu khi nhấp vào biểu tượng tải xuống
     document.addEventListener('DOMContentLoaded', function () {
         var dropdownToggle = document.getElementById('dropdownMenuButton');
