@@ -22,6 +22,7 @@ from io import StringIO
 import csv
 from flask import make_response
 from sqlalchemy import LargeBinary
+from apscheduler.schedulers.background import BackgroundScheduler
 # _______________________________Khai báo__________________________________________________________________
 
 app = Flask(__name__,static_folder='static')               
@@ -33,6 +34,10 @@ db = SQLAlchemy(app)
 user = None
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 lazyviews = LazyViews(app)
+
+# Khởi tạo scheduler
+scheduler = BackgroundScheduler()
+
 class User(db.Model, UserMixin):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -72,6 +77,21 @@ class Manager(db.Model):
         self.checkout = checkout
         self.license_plate_image_in = license_plate_image_in
         self.license_plate_image_out = license_plate_image_out
+        
+class Statistics(db.Model):
+    __tablename__ = "statistics"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    license_plate = db.Column(db.String(50), nullable=False)
+    current_date = db.Column(db.Date, nullable=False)
+    checkin_time = db.Column(db.DateTime, nullable=True)
+    checkout_time = db.Column(db.DateTime, nullable=True)
+
+    def __init__(self, license_plate, current_date, checkin=None, checkout=None):
+        self.license_plate = license_plate
+        self.current_date = current_date
+        self.checkin_time = checkin
+        self.checkout_time = checkout
+
 with app.app_context():
     db.create_all()
 # ______________________________API_______________________________________________________________________
@@ -110,6 +130,110 @@ def admin():
     users = User.query.all()
     return render_template('user.html', users = users)
 
+def schedule_job():
+    # Khởi tạo lịch trình
+    scheduler = BackgroundScheduler()
+
+    # Cấu hình công việc chạy hàm update_statistics() vào mỗi 23h hàng ngày
+    scheduler.add_job(update_statistics, 'cron', hour=10)
+
+    # Khởi động lịch trình
+    scheduler.start()
+    
+def update_statistics():
+    # Lấy danh sách tất cả các biển số xe của người dùng
+    users = User.query.all()
+
+    # Lấy ngày hiện tại theo định dạng "ngày - tháng - năm"
+    current_date = datetime.now().strftime("%Y-%m-%d")
+
+    # Lặp qua từng người dùng
+    for user in users:
+        license_plate = user.license_phate
+
+        # Lấy thời gian checkin đầu tiên trong ngày
+        checkin_query = db.session.query(func.min(Manager.checkin)).filter(
+            Manager.license_phate == license_plate,
+            func.date(Manager.checkin.strftime("%Y-%m-%d")) == current_date
+        )
+        checkin_time = checkin_query.scalar()
+
+        # Lấy thời gian checkout cuối cùng trong ngày
+        checkout_query = db.session.query(func.max(Manager.checkout)).filter(
+            Manager.license_phate == license_plate,
+            func.date(Manager.checkout.strftime("%Y-%m-%d")) == current_date
+        )
+        checkout_time = checkout_query.scalar()
+
+        # Kiểm tra nếu đã tồn tại bản ghi cho biển số xe và ngày hiện tại trong bảng Statistics
+        existing_statistic = Statistics.query.filter_by(license_plate=license_plate, current_date=current_date).first()
+
+        # Cập nhật hoặc tạo mới bản ghi trong bảng Statistics
+        if existing_statistic:
+            existing_statistic.checkin_time = checkin_time
+            existing_statistic.checkout_time = checkout_time
+        else:
+            new_statistic = Statistics(license_plate=license_plate, current_date=current_date,
+                                       checkin_time=checkin_time, checkout_time=checkout_time)
+            db.session.add(new_statistic)
+
+    # Lưu các thay đổi vào cơ sở dữ liệu
+    db.session.commit()
+
+
+# @app.route('/statisticals', methods=['GET', 'POST'])
+# def statisticals():
+#     if request.method == 'POST':
+#         data = request.get_json()
+#         selected_date_str = data.get('selected_date')
+#         # selected_date_str = "2024-05-17"
+#         selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d') if selected_date_str else datetime.now().date()  # Chuyển đổi ngày thành đối tượng datetime
+    
+#         print(selected_date)
+#         # Truy vấn dữ liệu từ cơ sở dữ liệu
+#         users = User.query.all()
+#         statistics = Statistics.query.filter(Statistics.current_date == selected_date_str).all()  # Lọc dữ liệu theo ngày được chọn
+        
+#         print("`````````````")
+        
+#         print(statistics)
+#         # Kết hợp dữ liệu từ hai bảng
+#         combined_data = []
+#         for stat in statistics:
+#             user = next((u for u in users if u.license_phate == stat.license_plate), None)
+#             if user:
+#                 print("`````````````")
+#                 print(user)
+#                 combined_data.append({'user': user, 'statistics': stat})
+    
+#         print("---------------------------------------------------------------------------")
+#         print(combined_data)
+#         return render_template('statistical.html', combined_data=combined_data)
+
+@app.route('/statisticals', methods=['GET', 'POST'])
+def statisticals():
+    combined_data = []
+
+    if request.method == 'POST':
+        data = request.get_json()
+        selected_date_str = data.get('selected_date')
+        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        print(selected_date_str)  # Debug: in ra ngày được chọn
+
+        # Truy vấn dữ liệu từ cơ sở dữ liệu
+        users = User.query.all()
+        statistics = Statistics.query.filter(Statistics.current_date == selected_date).all()  # Lọc dữ liệu theo ngày được chọn
+
+        print(statistics)  # Debug: in ra dữ liệu truy vấn từ statistics
+
+        # Kết hợp dữ liệu từ hai bảng
+        for stat in statistics:
+            user = next((u for u in users if u.license_phate == stat.license_plate), None)
+            if user:
+                print(user)
+                combined_data.append({'user': user, 'statistics': stat})
+                print(combined_data)
+    return render_template('statistical.html', combined_data=combined_data)
 
 @app.route('/deleteuser/<int:id>')
 def deleteuser(id):
@@ -130,7 +254,6 @@ def register():
     users = User.query.all()
     return render_template('user.html', users=users)
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -144,7 +267,6 @@ def open_servo():
 def close_servo():
     print("Close servo")
     return {'status': 'success'}
-
 
 @app.route('/api/video', methods=['GET', 'POST'])
 def video():
@@ -401,6 +523,8 @@ def download_csv(table):
         return 'An error occurred while processing the request.', 500
 
 if __name__ == '__main__':
+    
+    schedule_job()
     app.run(host='0.0.0.0',port=5000,debug=True)
 
 

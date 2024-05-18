@@ -81,7 +81,7 @@
 
             <!-- Nav Item - Pages Collapse Menu -->
             <li class="nav-item">
-                <a class="nav-link collapsed" href="{{url_for('video')}}" data-toggle="collapse"
+                <a class="nav-link collapsed" href="{{url_for('statisticals')}}" data-toggle="collapse"
                     data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
                     <i class="fas fa-fw fa-folder"></i>
                     <span>Pages</span>
@@ -196,9 +196,11 @@
                                         <div class="card-body">
                                             <div class="row no-gutters align-items-center">
                                                 <div class="col mr-2">
-                                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                                    <div
+                                                        class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                                                         Vehicle status</div>
-                                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{text}} Enter</div>
+                                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{text}} Enter
+                                                    </div>
                                                 </div>
                                                 <div class="col-auto">
                                                     <i class="fas fa-comments fa-2x text-gray-300"></i>
@@ -213,14 +215,12 @@
                             <div class="row ">
                                 <div class="row justify-content-center">
                                     <div class="col-xl-6 col-lg-6">
-                                        <p>Enntrance gate</p>
-                                        <video id="videoElement" autoplay
-                                            style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;"></video>
+                                        <p>Entrance gate</p>
+                                        <img src="http://100.106.151.8:8080/?action=stream"   style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;">
                                     </div>
                                     <div class="col-xl-6 col-lg-6">
                                         <p>Exit gate</p>
-                                        <video id="videoElement1" autoplay
-                                            style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;"></video>
+                                        <img src="http://100.74.97.91:8080/?action=stream"   style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;">
                                     </div>
                                 </div>
                             </div>
@@ -268,26 +268,13 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                         </div>
                     </div>
-
-
-
-                    <!-- Content Row -->
-
-
                 </div>
-                <!-- End of Main Content -->
-
-
             </div>
-            <!-- End of Content Wrapper -->
 
         </div>
-        <!-- End of Page Wrapper -->
-
-        <!-- Scroll to Top Button-->
         <a class="scroll-to-top rounded" href="#page-top">
             <i class="fas fa-angle-up"></i>
         </a>
@@ -341,29 +328,23 @@
             // Cập nhật ngày và thời gian mỗi giây
             setInterval(updateDateTime, 1000);
 
-            // Lấy stream video từ camera
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function (stream) {
-                    var video = document.getElementById('videoElement');
-                    video.srcObject = stream;
-                    video.onloadedmetadata = function (e) {
-                        video.play();
-                    };
-                })
-                .catch(function (err) {
-                    console.log("An error occurred: " + err);
-                });
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function (stream) {
-                    var video = document.getElementById('videoElement1');
-                    video.srcObject = stream;
-                    video.onloadedmetadata = function (e) {
-                        video.play();
-                    };
-                })
-                .catch(function (err) {
-                    console.log("An error occurred: " + err);
-                });
+            document.addEventListener("DOMContentLoaded", function () {
+                var videoElement = document.getElementById('videoElement');
+                var videoElement1 = document.getElementById('videoElement1');
+
+                if (Hls.isSupported()) {
+                    var hls1 = new Hls();
+                    hls1.loadSource('http://100.106.151.8:8080/stream.html');
+                    hls1.attachMedia(videoElement);
+
+                    var hls2 = new Hls();
+                    hls2.loadSource('http://100.74.97.91:8080/stream.html');
+                    hls2.attachMedia(videoElement1);
+                } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                    videoElement.src = 'http://100.106.151.8:8080/stream.html';
+                    videoElement1.src = 'http://100.74.97.91:8080/stream.html';
+                }
+            });
             function openServo() {
                 // alert('Mở cửa thành công');
                 fetch('http://192.168.1.132:5001/open', {
