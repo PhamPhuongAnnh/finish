@@ -83,8 +83,8 @@ class Statistics(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     license_plate = db.Column(db.String(50), nullable=False)
     current_date = db.Column(db.Date, nullable=False)
-    checkin_time = db.Column(db.DateTime, nullable=True)
-    checkout_time = db.Column(db.DateTime, nullable=True)
+    checkin_time = db.Column(db.String(8), nullable=True)  # Store time as string in HH:MM:SS format
+    checkout_time = db.Column(db.String(8), nullable=True)
 
     def __init__(self, license_plate, current_date, checkin=None, checkout=None):
         self.license_plate = license_plate
@@ -129,86 +129,6 @@ def admin():
     global user
     users = User.query.all()
     return render_template('user.html', users = users)
-
-def schedule_job():
-    # Khởi tạo lịch trình
-    scheduler = BackgroundScheduler()
-
-    # Cấu hình công việc chạy hàm update_statistics() vào mỗi 23h hàng ngày
-    scheduler.add_job(update_statistics, 'cron', hour=10)
-
-    # Khởi động lịch trình
-    scheduler.start()
-    
-def update_statistics():
-    # Lấy danh sách tất cả các biển số xe của người dùng
-    users = User.query.all()
-
-    # Lấy ngày hiện tại theo định dạng "ngày - tháng - năm"
-    current_date = datetime.now().strftime("%Y-%m-%d")
-
-    # Lặp qua từng người dùng
-    for user in users:
-        license_plate = user.license_phate
-
-        # Lấy thời gian checkin đầu tiên trong ngày
-        checkin_query = db.session.query(func.min(Manager.checkin)).filter(
-            Manager.license_phate == license_plate,
-            func.date(Manager.checkin.strftime("%Y-%m-%d")) == current_date
-        )
-        checkin_time = checkin_query.scalar()
-
-        # Lấy thời gian checkout cuối cùng trong ngày
-        checkout_query = db.session.query(func.max(Manager.checkout)).filter(
-            Manager.license_phate == license_plate,
-            func.date(Manager.checkout.strftime("%Y-%m-%d")) == current_date
-        )
-        checkout_time = checkout_query.scalar()
-
-        # Kiểm tra nếu đã tồn tại bản ghi cho biển số xe và ngày hiện tại trong bảng Statistics
-        existing_statistic = Statistics.query.filter_by(license_plate=license_plate, current_date=current_date).first()
-
-        # Cập nhật hoặc tạo mới bản ghi trong bảng Statistics
-        if existing_statistic:
-            existing_statistic.checkin_time = checkin_time
-            existing_statistic.checkout_time = checkout_time
-        else:
-            new_statistic = Statistics(license_plate=license_plate, current_date=current_date,
-                                       checkin_time=checkin_time, checkout_time=checkout_time)
-            db.session.add(new_statistic)
-
-    # Lưu các thay đổi vào cơ sở dữ liệu
-    db.session.commit()
-
-
-# @app.route('/statisticals', methods=['GET', 'POST'])
-# def statisticals():
-#     if request.method == 'POST':
-#         data = request.get_json()
-#         selected_date_str = data.get('selected_date')
-#         # selected_date_str = "2024-05-17"
-#         selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d') if selected_date_str else datetime.now().date()  # Chuyển đổi ngày thành đối tượng datetime
-    
-#         print(selected_date)
-#         # Truy vấn dữ liệu từ cơ sở dữ liệu
-#         users = User.query.all()
-#         statistics = Statistics.query.filter(Statistics.current_date == selected_date_str).all()  # Lọc dữ liệu theo ngày được chọn
-        
-#         print("`````````````")
-        
-#         print(statistics)
-#         # Kết hợp dữ liệu từ hai bảng
-#         combined_data = []
-#         for stat in statistics:
-#             user = next((u for u in users if u.license_phate == stat.license_plate), None)
-#             if user:
-#                 print("`````````````")
-#                 print(user)
-#                 combined_data.append({'user': user, 'statistics': stat})
-    
-#         print("---------------------------------------------------------------------------")
-#         print(combined_data)
-#         return render_template('statistical.html', combined_data=combined_data)
 
 @app.route('/statisticals', methods=['GET', 'POST'])
 def statisticals():
@@ -274,29 +194,26 @@ def video():
     parked_cars = Manager.query.filter_by(checkout=None).count()
     available_spaces = total_spaces - parked_cars
     model = YOLO('best.pt')
-    # img_url = "http://192.168.1.132:8080/?action=snapshot.jpg"  
-   
     
+    # img_url = "http://192.168.1.132:8080/?action=snapshot.jpg"  
     # response = requests.get(img_url, auth=('pi', '1'))
     # img_array = np.array(bytearray(response.content), dtype=np.uint8)
     # image = cv2.imdecode(img_array, -1)
 
-    image_path = "d:\\finish\\1.jpg"
+    image_path = "d:\\finish\\2.jpg"
     image = cv2.imread(image_path)
     filtered_string = process_image(model, image)
     id = ""
     name = ""
     department = "" 
-    # send_text_and_signal_to_raspi(filtered_string)
+    send_text_and_signal_to_raspi(filtered_string)
     if filtered_string:
-        # result = Manager.query.filter(xManager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
         result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
 
-        local = datetime.now()
-        print("Local:", local.strftime("%m/%d/%Y, %H:%M:%S"))
         tz_VN = pytz.timezone('Asia/Ho_Chi_Minh') 
         datetime_VN = datetime.now(tz_VN)
-    
+        current_date = datetime_VN.date()  # Use date() method to get a date object
+        current_time = datetime_VN.strftime('%Hh%Mm%Ss')
         if result is None:
             with open("static/cropped_image.jpg", 'rb') as f:
                 image_data = f.read()
@@ -309,7 +226,18 @@ def video():
             result.checkout = datetime_VN
             result.license_plate_image_out = image_data
 
+        # Check if the license plate already exists in the Statistics table for today
+        stat_record = Statistics.query.filter_by(license_plate=filtered_string, current_date=current_date).first()
+        if stat_record is None:
+            # Add a new record if it doesn't exist
+            new_stat_record = Statistics(license_plate=filtered_string, current_date=current_date, checkin=current_time)
+            db.session.add(new_stat_record)
+        else:
+            # Update the checkout time if it exists
+            stat_record.checkout_time = current_time
+
         db.session.commit()
+
         user = User.query.filter_by(license_phate=filtered_string).first()
         
         if user: 
@@ -317,23 +245,23 @@ def video():
             name = user.name 
             department = user.department
             
-    return render_template('test.html',spaces =  available_spaces, text=filtered_string, id = id, name = name, department = department)
+    return render_template('test.html', spaces=available_spaces, text=filtered_string, id=id, name=name, department=department)
 
-# def send_text_and_signal_to_raspi(license_plate):
-#     if license_plate:
-#         send_text_to_raspi(license_plate)
+def send_text_and_signal_to_raspi(license_plate):
+    if license_plate:
+        send_text_to_raspi(license_plate)
 
-# def send_text_to_raspi(filtered_string):
-#     if filtered_string:
-#         raspi_ip = '192.168.1.132'
+def send_text_to_raspi(filtered_string):
+    if filtered_string:
+        raspi_ip = 'pi'
         
-#         raspi_url = f'http://{raspi_ip}:5001/receive_text'  
-#         data = {'filtered_string': filtered_string}
-#         response = requests.post(raspi_url, json=data)
-#         if response.status_code == 200:
-#             print('Văn bản đã được gửi đến RasPi thành công')
-#         else:
-#             print('Không thể gửi văn bản đến RasPi')
+        raspi_url = f'http://{raspi_ip}:5001/receive_text'  
+        data = {'filtered_string': filtered_string}
+        response = requests.post(raspi_url, json=data)
+        if response.status_code == 200:
+            print('Văn bản đã được gửi đến RasPi thành công')
+        else:
+            print('Không thể gửi văn bản đến RasPi')
 
     
 def process_image(model, image):
@@ -524,7 +452,6 @@ def download_csv(table):
 
 if __name__ == '__main__':
     
-    schedule_job()
     app.run(host='0.0.0.0',port=5000,debug=True)
 
 
