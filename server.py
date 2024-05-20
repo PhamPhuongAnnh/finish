@@ -23,6 +23,7 @@ import csv
 from flask import make_response
 from sqlalchemy import LargeBinary
 from apscheduler.schedulers.background import BackgroundScheduler
+from flask import Flask, request, jsonify
 # _______________________________Khai báo__________________________________________________________________
 
 app = Flask(__name__,static_folder='static')               
@@ -188,20 +189,30 @@ def close_servo():
     print("Close servo")
     return {'status': 'success'}
 
+def get_total_obstacles():
+    total_obstacles = 0
+    for pi_id in sensor_data:
+        
+        for sensor_id in sensor_data[pi_id]:
+            print(pi_id)
+            print(sensor_id)
+            print(sensor_data[pi_id][sensor_id])
+            print("______________________________________")
+            if sensor_data[pi_id][sensor_id] is None or sensor_data[pi_id][sensor_id] == 1:
+                total_obstacles += 1
+    print(total_obstacles)
+    print("************************")
+    return total_obstacles
+
 @app.route('/api/video', methods=['GET', 'POST'])
 def video():
-    total_spaces = 100
-    parked_cars = Manager.query.filter_by(checkout=None).count()
-    available_spaces = total_spaces - parked_cars
-    model = YOLO('best.pt')
-    
-    # img_url = "http://192.168.1.132:8080/?action=snapshot.jpg"  
-    # response = requests.get(img_url, auth=('pi', '1'))
-    # img_array = np.array(bytearray(response.content), dtype=np.uint8)
-    # image = cv2.imdecode(img_array, -1)
-
-    image_path = "d:\\finish\\2.jpg"
-    image = cv2.imread(image_path)
+    model = YOLO('best.pt') 
+    img_url_in = "http://ras:8080/?action=snapshot.jpg"  
+    response = requests.get(img_url_in, auth=('ras', '1'))
+    img_array = np.array(bytearray(response.content), dtype=np.uint8)
+    image = cv2.imdecode(img_array, -1)
+    # image_path = "d:\\finish\\2.jpg"
+    # image = cv2.imread(image_path)
     filtered_string = process_image(model, image)
     id = ""
     name = ""
@@ -247,7 +258,7 @@ def video():
             name = user.name 
             department = user.department
             
-    return render_template('test.html', spaces=available_spaces, text=filtered_string, id=id, name=name, department=department)
+    return render_template('test.html', text=filtered_string, id=id, name=name, department=department)
 
 def send_text_and_signal_to_raspi(license_plate):
     if license_plate:
@@ -256,7 +267,6 @@ def send_text_and_signal_to_raspi(license_plate):
 def send_text_to_raspi(filtered_string):
     if filtered_string:
         raspi_ip = 'pi'
-        
         raspi_url = f'http://{raspi_ip}:5001/receive_text'  
         data = {'filtered_string': filtered_string}
         response = requests.post(raspi_url, json=data)
@@ -466,6 +476,29 @@ def download_csv(table):
         
         # Trả về một phản hồi lỗi nếu có lỗi xảy ra
         return 'An error occurred while processing the request.', 500
+    
+# Biến lưu trữ dữ liệu cảm biến
+sensor_data = {
+    "ras": {"sensor1ras": None, "sensor2ras": None},
+    "pi": {"sensor1pi": None, "sensor2pi": None}
+}
+
+@app.route('/update_sensor', methods=['POST'])
+def update_sensor():
+    data = request.json
+    raspberry_id = data['raspberry_id']
+    sensor_id = data['sensor_id']
+    value = data['value']
+    
+    # Cập nhật dữ liệu cảm biến
+    sensor_data[raspberry_id][sensor_id] = value
+    
+    return jsonify({"status": "success", "data": sensor_data})
+
+@app.route('/get_sensor_data', methods=['GET'])
+def get_sensor_data():
+    total_obstacles = get_total_obstacles()
+    return jsonify(total_obstacles)
 
 if __name__ == '__main__':
     

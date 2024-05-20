@@ -178,12 +178,11 @@
                                                         class="text-xs font-weight-bold text-success text-uppercase mb-1">
                                                         Spaces
                                                     </div>
-
-                                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                    <div id="spaces-content"
+                                                        class="h5 mb-0 font-weight-bold text-gray-800">
                                                         {{spaces}}
                                                     </div>
                                                 </div>
-
                                                 <div class="col-auto">
                                                     <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
                                                 </div>
@@ -191,6 +190,7 @@
                                         </div>
                                     </div>
                                 </div>
+
                                 <div class="col-xl-4 col-md-6 mb-4">
                                     <div class="card border-left-warning shadow h-100 py-2">
                                         <div class="card-body">
@@ -216,11 +216,39 @@
                                 <div class="row justify-content-center">
                                     <div class="col-xl-6 col-lg-6">
                                         <p>Entrance gate</p>
-                                        <img src="http://100.106.151.8:8080/?action=stream"   style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;">
+                                        <img src="http://ras:8080/?action=stream"
+                                            style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;">
+                                        <div class="row justify-content-center" id="buttonRow"
+                                            style="width: 100%; margin-top: 10px; margin-left: 0px;">
+                                            <div class="col-md-6 d-none d-md-block justify-content-center">
+                                                <button type="button" style="margin-top: 10px;"
+                                                    class="btn btn-primary btn-block"
+                                                    onclick="openServo()">Open</button>
+                                            </div>
+                                            <div class="col-md-6 d-none d-md-block justify-content-center">
+                                                <button type="button" style="margin-top: 10px;"
+                                                    class="btn btn-primary btn-block"
+                                                    onclick="closeServo()">Close</button>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-xl-6 col-lg-6">
                                         <p>Exit gate</p>
-                                        <img src="http://100.74.97.91:8080/?action=stream"   style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;">
+                                        <img src="http://pi:8080/?action=stream"
+                                            style="width: 100%; border: 1mm solid #4e73df; border-radius: 10px;">
+                                        <div class="row justify-content-center" id="buttonRow"
+                                            style="width: 100%; margin-top: 10px; margin-left: 0px;">
+                                            <div class="col-md-6 d-none d-md-block justify-content-center">
+                                                <button type="button" style="margin-top: 10px;"
+                                                    class="btn btn-primary btn-block"
+                                                    onclick="openServo()">Open</button>
+                                            </div>
+                                            <div class="col-md-6 d-none d-md-block justify-content-center">
+                                                <button type="button" style="margin-top: 10px;"
+                                                    class="btn btn-primary btn-block"
+                                                    onclick="closeServo()">Close</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -256,17 +284,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="row justify-content-center" id="buttonRow"
-                                    style="width: 100%; margin-top: 10px; margin-left: 8px;">
-                                    <div class="col-md-6 d-none d-md-block justify-content-center">
-                                        <button type="button" style="margin-top: 10px;"
-                                            class="btn btn-primary btn-block" onclick="openServo()">Open</button>
-                                    </div>
-                                    <div class="col-md-6 d-none d-md-block justify-content-center">
-                                        <button type="button" style="margin-top: 10px;"
-                                            class="btn btn-primary btn-block" onclick="closeServo()">Close</button>
-                                    </div>
-                                </div>
+
                             </div>
 
                         </div>
@@ -308,6 +326,22 @@
         <script src="{{ url_for('static', filename='js/demo/chart-area-demo.js') }}"></script>
         <script src="{{ url_for('static', filename='js/demo/chart-pie-demo.js') }}"></script>
         <script>
+            function updateSpaces() {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', '/get_sensor_data', true); 
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        document.getElementById('spaces-content').innerHTML = xhr.responseText;
+                    }
+                };
+                xhr.send();
+            }
+
+            // Tự động tải lại nội dung mỗi 5 giây (5000 milliseconds)
+            setInterval(updateSpaces, 1000);
+            // Gọi hàm lần đầu tiên để tải nội dung ngay khi trang được tải
+            updateSpaces();
+
             function updateDateTime() {
                 // Lấy ngày tháng hiện tại
                 var today = new Date();
@@ -363,4 +397,4 @@
         </script>
 </body>
 
-</html> 
+</html>
