@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"name": "finish",
+			"path": "../.."
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "argon-dashboard-material-ui-1.0.0"
+	}
+}

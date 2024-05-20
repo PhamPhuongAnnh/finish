@@ -207,6 +207,8 @@ def video():
     name = ""
     department = "" 
     send_text_and_signal_to_raspi(filtered_string)
+    send_text_and_signal_to_raspi1(filtered_string)
+        
     if filtered_string:
         result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
 
@@ -263,7 +265,22 @@ def send_text_to_raspi(filtered_string):
         else:
             print('Không thể gửi văn bản đến RasPi')
 
-    
+def send_text_and_signal_to_raspi1(license_plate):
+    if license_plate:
+        send_text_to_raspi(license_plate)
+
+def send_text_to_raspi1(filtered_string):
+    if filtered_string:
+        raspi_ip = 'ras'
+        
+        raspi_url = f'http://{raspi_ip}:5001/receive_text'  
+        data = {'filtered_string': filtered_string}
+        response = requests.post(raspi_url, json=data)
+        if response.status_code == 200:
+            print('Văn bản đã được gửi đến RasPi thành công')
+        else:
+            print('Không thể gửi văn bản đến RasPi')
+
 def process_image(model, image):
     mytext = ""
     results = model(image)
