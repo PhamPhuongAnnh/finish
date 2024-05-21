@@ -211,8 +211,6 @@ def video():
     response = requests.get(img_url_in, auth=('ras', '1'))
     img_array = np.array(bytearray(response.content), dtype=np.uint8)
     image = cv2.imdecode(img_array, -1)
-    # image_path = "d:\\finish\\2.jpg"
-    # image = cv2.imread(image_path)
     filtered_string = process_image(model, image)
     id = ""
     name = ""
