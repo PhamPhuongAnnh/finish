@@ -266,7 +266,7 @@ def send_text_and_signal_to_raspi(license_plate):
 
 def send_text_to_raspi(filtered_string):
     if filtered_string:
-        raspi_ip = 'pi'
+        raspi_ip = 'ras'
         raspi_url = f'http://{raspi_ip}:5001/receive_text'  
         data = {'filtered_string': filtered_string}
         response = requests.post(raspi_url, json=data)
@@ -479,8 +479,8 @@ def download_csv(table):
     
 # Biến lưu trữ dữ liệu cảm biến
 sensor_data = {
-    "ras": {"sensor1ras": None, "sensor2ras": None},
-    "pi": {"sensor1pi": None, "sensor2pi": None}
+    "ras": {"sensor1ras": None, "sensor2ras": None,"sensor3ras": None,"sensor4ras": None},
+    "pi": {"sensor1ras": None, "sensor2ras": None,"sensor3ras": None,"sensor4ras": None},
 }
 
 @app.route('/update_sensor', methods=['POST'])
