@@ -194,14 +194,14 @@ def get_total_obstacles():
     for pi_id in sensor_data:
         
         for sensor_id in sensor_data[pi_id]:
-            print(pi_id)
-            print(sensor_id)
-            print(sensor_data[pi_id][sensor_id])
-            print("______________________________________")
+            # print(pi_id)
+            # print(sensor_id)
+            # print(sensor_data[pi_id][sensor_id])
+            # print("______________________________________")
             if sensor_data[pi_id][sensor_id] is None or sensor_data[pi_id][sensor_id] == 1:
                 total_obstacles += 1
-    print(total_obstacles)
-    print("************************")
+    # print(total_obstacles)
+    # print("************************")
     return total_obstacles
 
 @app.route('/api/video', methods=['GET', 'POST'])
@@ -211,52 +211,90 @@ def video():
     response = requests.get(img_url_in, auth=('ras', '1'))
     img_array = np.array(bytearray(response.content), dtype=np.uint8)
     image = cv2.imdecode(img_array, -1)
+    
+    
+    
+    img_url_out = "http://pi:8080/?action=snapshot.jpg"  
+    response_out = requests.get(img_url_out, auth=('ras', '1'))
+    img_array_out = np.array(bytearray(response_out.content), dtype=np.uint8)
+    image_out = cv2.imdecode(img_array_out, -1)
+    
+    
+    # image_path = "d:\\finish\\2.jpg"
+    # image = cv2.imread(image_path)
     filtered_string = process_image(model, image)
+    filtered_string_out = process_image(model, image_out)
+    print("+++++++++++++++++++++++++++++++++++++++++++++++")
+    print(filtered_string)
+    print(filtered_string_out)
+    print("+++++++++++++++++++++++++++++++++++++++++++++++")
+    
     id = ""
     name = ""
     department = "" 
+    
     send_text_and_signal_to_raspi(filtered_string)
-    send_text_and_signal_to_raspi1(filtered_string)
-        
+    send_text_and_signal_to_raspi1(filtered_string_out)
+
     if filtered_string:
-        result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
-
-        tz_VN = pytz.timezone('Asia/Ho_Chi_Minh') 
-        datetime_VN = datetime.now(tz_VN)
-        current_date = datetime_VN.date()  # Use date() method to get a date object
-        current_time = datetime_VN.strftime('%Hh%Mm%Ss')
-        if result is None:
-            with open("static/cropped_image.jpg", 'rb') as f:
-                image_data = f.read()
-            
-            new_record = Manager(license_phate=filtered_string, checkin=datetime_VN, license_plate_image_in=image_data)
-            db.session.add(new_record)
-        else:   
-            with open("static/cropped_image.jpg", 'rb') as f:
-                image_data = f.read()
-            result.checkout = datetime_VN
-            result.license_plate_image_out = image_data
-
-        # Check if the license plate already exists in the Statistics table for today
-        stat_record = Statistics.query.filter_by(license_plate=filtered_string, current_date=current_date).first()
-        if stat_record is None:
-            # Add a new record if it doesn't exist
-            new_stat_record = Statistics(license_plate=filtered_string, current_date=current_date, checkin=current_time)
-            db.session.add(new_stat_record)
-        else:
-            # Update the checkout time if it exists
-            stat_record.checkout_time = current_time
-
-        db.session.commit()
-
         user = User.query.filter_by(license_phate=filtered_string).first()
-        
-        if user: 
-            id = user.id
-            name = user.name 
-            department = user.department
+        if user:
+            result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
+            tz_VN = pytz.timezone('Asia/Ho_Chi_Minh') 
+            datetime_VN = datetime.now(tz_VN)
+            current_date = datetime_VN.date()  # Use date() method to get a date object
+            current_time = datetime_VN.strftime('%Hh%Mm%Ss')
+            if result is None:
+                with open("static/cropped_image.jpg", 'rb') as f:
+                    image_data = f.read()
+                new_record = Manager(license_phate=filtered_string, checkin=datetime_VN, license_plate_image_in=image_data)
+                db.session.add(new_record)
+                
+            # Check if the license plate already exists in the Statistics table for today
+            stat_record = Statistics.query.filter_by(license_plate=filtered_string, current_date=current_date).first()
+            if stat_record is None:
+                # Add a new record if it doesn't exist
+                new_stat_record = Statistics(license_plate=filtered_string, current_date=current_date, checkin=current_time)
+                db.session.add(new_stat_record)
+            else:
+                # Update the checkout time if it exists
+                stat_record.checkout_time = current_time
+            db.session.commit()
+                
+    if filtered_string_out:
+        user = User.query.filter_by(license_phate=filtered_string_out).first()
+        if user:
+            result = Manager.query.filter(Manager.license_phate == filtered_string_out, (Manager.checkout.is_(None))).first()
+            tz_VN = pytz.timezone('Asia/Ho_Chi_Minh') 
+            datetime_VN = datetime.now(tz_VN)
+            current_date = datetime_VN.date()  # Use date() method to get a date object
+            current_time = datetime_VN.strftime('%Hh%Mm%Ss')
+            if result is not None:
+                print("*********************************************************************************")
+                with open("static/cropped_image.jpg", 'rb') as f:
+                    image_data = f.read()
+                result.checkout = datetime_VN
+                result.license_plate_image_out = image_data
+            else:
+                print("nonono")
+            # Check if the license plate already exists in the Statistics table for today
+            stat_record = Statistics.query.filter_by(license_plate=filtered_string_out, current_date=current_date).first()
+            if stat_record is None:
+                # Add a new record if it doesn't exist
+                new_stat_record = Statistics(license_plate=filtered_string_out, current_date=current_date, checkin=current_time)
+                db.session.add(new_stat_record)
+            else:
+                # Update the checkout time if it exists
+                stat_record.checkout_time = current_time
+
+            db.session.commit()
+            user = User.query.filter_by(license_phate=filtered_string_out).first()
+            if user: 
+                id = user.id
+                name = user.name 
+                department = user.department
             
-    return render_template('test.html', text=filtered_string, id=id, name=name, department=department)
+    return render_template('test.html', text=filtered_string_out, id=id, name=name, department=department)
 
 def send_text_and_signal_to_raspi(license_plate):
     if license_plate:
@@ -279,7 +317,7 @@ def send_text_and_signal_to_raspi1(license_plate):
 
 def send_text_to_raspi1(filtered_string):
     if filtered_string:
-        raspi_ip = 'ras'
+        raspi_ip = 'pi'
         
         raspi_url = f'http://{raspi_ip}:5001/receive_text'  
         data = {'filtered_string': filtered_string}
