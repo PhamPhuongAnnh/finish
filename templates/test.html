@@ -198,9 +198,11 @@
                                                 <div class="col mr-2">
                                                     <div
                                                         class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                                        Vehicle status</div>
-                                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{text}} Enter
+                                                        Vehicle status
                                                     </div>
+                                                    <!-- Cập nhật ID của phần tử để phù hợp với JavaScript -->
+                                                    <div class="h5 mb-0 font-weight-bold text-gray-800"
+                                                        id="vehicle-status-text"></div>
                                                 </div>
                                                 <div class="col-auto">
                                                     <i class="fas fa-comments fa-2x text-gray-300"></i>
@@ -265,22 +267,27 @@
                                         <div class="row">
                                             <div class="col-xl-6">
                                                 <p>Enter</p>
-                                                <img src="{{ url_for('static', filename='cropped_image.jpg') }}"
-                                                    alt="Your Image 1"
+                                                <img id="enter-image"
+                                                    src="{{ url_for('static', filename='cropped_image_out.jpg') }}"
+                                                    alt="Enter Image"
                                                     style="width: 100%; height: auto; border: 2px solid #4e73df; border-radius: 10px;">
                                             </div>
                                             <div class="col-xl-6">
                                                 <p>Exit</p>
-                                                <img src="{{ url_for('static', filename='cropped_image.jpg') }}"
-                                                    alt="Your Image 2"
+                                                <img id="exit-image"
+                                                    src="{{ url_for('static', filename='cropped_image_out.jpg') }}"
+                                                    alt="Exit Image"
                                                     style="width: 100%; height: auto; border: 2px solid #4e73df; border-radius: 10px;">
                                             </div>
                                         </div>
-                                        <div class="row" style="display: block; padding-left: 15px; padding-top: 15px;">
-                                            <p style="color: black; display: block;">ID: NV{{ id }}</p>
-                                            <p style="color: black; display: block;">Name: {{ name }}</p>
-                                            <p style="color: black; display: block;">Department: {{ department }}</p>
-                                            <p style="color: black; display: block;">License plate: {{ text }}</p>
+                                        <!-- Phần nhận từ API in -->
+                                        <div id="video-info" class="row"
+                                            style="display: block; padding-left: 15px; padding-top: 15px;">
+                                            <p id="video-id" style="color: black; display: block;">ID: </p>
+                                            <p id="video-name" style="color: black; display: block;">Name: </p>
+                                            <p id="video-department" style="color: black; display: block;">Department:
+                                            </p>
+                                            <p id="video-text" style="color: black; display: block;">License plate: </p>
                                         </div>
                                     </div>
                                 </div>
@@ -326,9 +333,37 @@
         <script src="{{ url_for('static', filename='js/demo/chart-area-demo.js') }}"></script>
         <script src="{{ url_for('static', filename='js/demo/chart-pie-demo.js') }}"></script>
         <script>
+            function callInApi() {
+                fetch('/api/video/out')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Cập nhật dữ liệu từ API out vào các phần tử HTML tương ứng
+                        document.getElementById('video-id').textContent = `ID: ${data.id || ''}`;
+                        document.getElementById('video-name').textContent = `Name: ${data.name || ''}`;
+                        document.getElementById('video-department').textContent = `Department: ${data.department || ''}`;
+                        document.getElementById('video-text').textContent = `License plate: ${data.data || ''}`;
+                        // Cập nhật URL của exit-image
+                        console.log('Out API called', data);
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+            function callOutApi() {
+                fetch('/api/video/in')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Cập nhật dữ liệu từ API out vào phần tử HTML tương ứng
+                        document.getElementById('vehicle-status-text').textContent = data.data;
+                        console.log('Out API called', data);
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+
+            setInterval(callInApi, 3000);
+            setInterval(callOutApi, 3000);
+
             function updateSpaces() {
                 const xhr = new XMLHttpRequest();
-                xhr.open('GET', '/get_sensor_data', true); 
+                xhr.open('GET', '/get_sensor_data', true);
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         document.getElementById('spaces-content').innerHTML = xhr.responseText;

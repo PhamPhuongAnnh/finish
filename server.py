@@ -24,6 +24,7 @@ from flask import make_response
 from sqlalchemy import LargeBinary
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify
+from concurrent.futures import ThreadPoolExecutor, as_completed
 # _______________________________Khai báo__________________________________________________________________
 
 app = Flask(__name__,static_folder='static')               
@@ -98,6 +99,7 @@ with app.app_context():
 # ______________________________API_______________________________________________________________________
 
 
+model = YOLO('best.pt')
 #Login
 @login.user_loader
 def user_load(user_id):
@@ -204,130 +206,132 @@ def get_total_obstacles():
     # print("************************")
     return total_obstacles
 
-@app.route('/api/video', methods=['GET', 'POST'])
-def video():
-    model = YOLO('best.pt') 
-    img_url_in = "http://ras:8080/?action=snapshot.jpg"  
-    response = requests.get(img_url_in, auth=('ras', '1'))
+def fetch_and_process_image(url, auth, model, source):
+    response = requests.get(url, auth=auth)
     img_array = np.array(bytearray(response.content), dtype=np.uint8)
     image = cv2.imdecode(img_array, -1)
-    
-    
-    
-    img_url_out = "http://pi:8080/?action=snapshot.jpg"  
-    response_out = requests.get(img_url_out, auth=('ras', '1'))
-    img_array_out = np.array(bytearray(response_out.content), dtype=np.uint8)
-    image_out = cv2.imdecode(img_array_out, -1)
-    
-    
-    # image_path = "d:\\finish\\2.jpg"
-    # image = cv2.imread(image_path)
-    filtered_string = process_image(model, image)
-    filtered_string_out = process_image(model, image_out)
-    print("+++++++++++++++++++++++++++++++++++++++++++++++")
-    print(filtered_string)
-    print(filtered_string_out)
-    print("+++++++++++++++++++++++++++++++++++++++++++++++")
-    
-    id = ""
-    name = ""
-    department = "" 
-    
-    send_text_and_signal_to_raspi(filtered_string)
-    send_text_and_signal_to_raspi1(filtered_string_out)
+    filtered_string = process_image(model, image, source)
+    return filtered_string
 
-    if filtered_string:
-        user = User.query.filter_by(license_phate=filtered_string).first()
-        if user:
-            result = Manager.query.filter(Manager.license_phate == filtered_string, (Manager.checkin.is_(None) | Manager.checkout.is_(None))).first()
-            tz_VN = pytz.timezone('Asia/Ho_Chi_Minh') 
-            datetime_VN = datetime.now(tz_VN)
-            current_date = datetime_VN.date()  # Use date() method to get a date object
-            current_time = datetime_VN.strftime('%Hh%Mm%Ss')
+def process_db_operations(filtered_string, in_or_out):
+    user = User.query.filter_by(license_phate=filtered_string).first()
+    if user:
+        tz_VN = pytz.timezone('Asia/Ho_Chi_Minh')
+        datetime_VN = datetime.now(tz_VN)
+        current_date = datetime_VN.date()
+        current_time = datetime_VN.strftime('%Hh%Mm%Ss')
+
+        if in_or_out == 'in':
+            result = Manager.query.filter(
+                Manager.license_phate == filtered_string,
+                (Manager.checkin.is_(None) | Manager.checkout.is_(None))
+            ).first()
             if result is None:
-                with open("static/cropped_image.jpg", 'rb') as f:
+                with open("static/cropped_image_in.jpg", 'rb') as f:
                     image_data = f.read()
-                new_record = Manager(license_phate=filtered_string, checkin=datetime_VN, license_plate_image_in=image_data)
+                new_record = Manager(
+                    license_phate=filtered_string, 
+                    checkin=datetime_VN, 
+                    license_plate_image_in=image_data
+                )
                 db.session.add(new_record)
-                
-            # Check if the license plate already exists in the Statistics table for today
-            stat_record = Statistics.query.filter_by(license_plate=filtered_string, current_date=current_date).first()
+
+            stat_record = Statistics.query.filter_by(
+                license_plate=filtered_string, 
+                current_date=current_date
+            ).first()
             if stat_record is None:
-                # Add a new record if it doesn't exist
-                new_stat_record = Statistics(license_plate=filtered_string, current_date=current_date, checkin=current_time)
+                new_stat_record = Statistics(
+                    license_plate=filtered_string, 
+                    current_date=current_date, 
+                    checkin=current_time
+                )
                 db.session.add(new_stat_record)
             else:
-                # Update the checkout time if it exists
                 stat_record.checkout_time = current_time
-            db.session.commit()
-                
-    if filtered_string_out:
-        user = User.query.filter_by(license_phate=filtered_string_out).first()
-        if user:
-            result = Manager.query.filter(Manager.license_phate == filtered_string_out, (Manager.checkout.is_(None))).first()
-            tz_VN = pytz.timezone('Asia/Ho_Chi_Minh') 
-            datetime_VN = datetime.now(tz_VN)
-            current_date = datetime_VN.date()  # Use date() method to get a date object
-            current_time = datetime_VN.strftime('%Hh%Mm%Ss')
+
+        elif in_or_out == 'out':
+            result = Manager.query.filter(
+                Manager.license_phate == filtered_string,
+                (Manager.checkout.is_(None))
+            ).first()
             if result is not None:
-                print("*********************************************************************************")
-                with open("static/cropped_image.jpg", 'rb') as f:
+                with open("static/cropped_image_out.jpg", 'rb') as f:
                     image_data = f.read()
                 result.checkout = datetime_VN
                 result.license_plate_image_out = image_data
-            else:
-                print("nonono")
-            # Check if the license plate already exists in the Statistics table for today
-            stat_record = Statistics.query.filter_by(license_plate=filtered_string_out, current_date=current_date).first()
+
+            stat_record = Statistics.query.filter_by(
+                license_plate=filtered_string, 
+                current_date=current_date
+            ).first()
             if stat_record is None:
-                # Add a new record if it doesn't exist
-                new_stat_record = Statistics(license_plate=filtered_string_out, current_date=current_date, checkin=current_time)
+                new_stat_record = Statistics(
+                    license_plate=filtered_string, 
+                    current_date=current_date, 
+                    checkin=current_time
+                )
                 db.session.add(new_stat_record)
             else:
-                # Update the checkout time if it exists
                 stat_record.checkout_time = current_time
 
             db.session.commit()
-            user = User.query.filter_by(license_phate=filtered_string_out).first()
-            if user: 
-                id = user.id
-                name = user.name 
-                department = user.department
-            
-    return render_template('test.html', text=filtered_string_out, id=id, name=name, department=department)
+            return user.id, user.name, user.department
 
-def send_text_and_signal_to_raspi(license_plate):
-    if license_plate:
-        send_text_to_raspi(license_plate)
+        db.session.commit()
+    return "", "", ""
 
-def send_text_to_raspi(filtered_string):
-    if filtered_string:
-        raspi_ip = 'ras'
-        raspi_url = f'http://{raspi_ip}:5001/receive_text'  
-        data = {'filtered_string': filtered_string}
-        response = requests.post(raspi_url, json=data)
-        if response.status_code == 200:
-            print('Văn bản đã được gửi đến RasPi thành công')
-        else:
-            print('Không thể gửi văn bản đến RasPi')
+@app.route('/api/video/in', methods=['GET'])
+def video_in():
+    img_url_in = "http://ras:8080/?action=snapshot.jpg"
+    try:
+       filtered_string_in = fetch_and_process_image(img_url_in, ('ras', '1'), model, 'ras')
+ 
+    except Exception as exc:
+        print(f"in generated an exception: {exc}")
+        filtered_string_in = None
 
-def send_text_and_signal_to_raspi1(license_plate):
-    if license_plate:
-        send_text_to_raspi(license_plate)
+    print("+++++++++++++++++++++++++++++++++++++++++++++++")
+    print(filtered_string_in)
+    print("+++++++++++++++++++++++++++++++++++++++++++++++")
 
-def send_text_to_raspi1(filtered_string):
-    if filtered_string:
-        raspi_ip = 'pi'
-        
-        raspi_url = f'http://{raspi_ip}:5001/receive_text'  
-        data = {'filtered_string': filtered_string}
-        response = requests.post(raspi_url, json=data)
-        if response.status_code == 200:
-            print('Văn bản đã được gửi đến RasPi thành công')
-        else:
-            print('Không thể gửi văn bản đến RasPi')
+    if filtered_string_in:
+        send_text_and_signal_to_raspi(filtered_string_in)
+        process_db_operations(filtered_string_in, 'in')
 
-def process_image(model, image):
+    return jsonify({"status": "success", "data": filtered_string_in})
+
+@app.route('/api/video/out', methods=['GET'])
+def video_out():
+    img_url_out = "http://pi:8080/?action=snapshot.jpg"
+    with open("static/cropped_image_out.jpg", 'rb') as f:
+        image_data = f.read()
+    try:
+        filtered_string_out = fetch_and_process_image(img_url_out, ('pi', '1'), model, 'pi')
+    except Exception as exc:
+        print(f"out generated an exception: {exc}")
+        filtered_string_out = None
+
+    print("+++++++++++++++++++++++++++++++++++++++++++++++")
+    print(filtered_string_out)
+    print("+++++++++++++++++++++++++++++++++++++++++++++++")
+
+    id = ""
+    name = ""
+    department = ""
+
+    if filtered_string_out:
+        send_text_and_signal_to_raspi1(filtered_string_out)
+        id, name, department = process_db_operations(filtered_string_out, 'out')
+
+    return jsonify({"status": "success", "data": filtered_string_out, "id": id, "name": name, "department": department})
+
+@app.route('/api/video', methods=['GET', 'POST'])
+def video():
+    return render_template('test.html')
+
+
+def process_image(model, image, source):
     mytext = ""
     results = model(image)
     boxes = results[0].boxes
@@ -340,7 +344,11 @@ def process_image(model, image):
         y_max = int(boxes.xyxy[0][3])
         cropped_image = image[y_min:y_max, x_min:x_max]
         results  = image_model.predict(cropped_image)
-        cv2.imwrite("static/cropped_image.jpg", cropped_image)
+        if source == 'pi':
+            cv2.imwrite("static/cropped_image_out.jpg", cropped_image)
+        elif source == 'ras':
+            cv2.imwrite("static/cropped_image_in.jpg", cropped_image)
+            
         gray_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
         image_results = image_model(cropped_image) 
         print(image_results)
@@ -423,6 +431,38 @@ def process_image(model, image):
     print(mytext)
     return mytext
 
+
+
+def send_text_and_signal_to_raspi(license_plate):
+    if license_plate:
+        send_text_to_raspi(license_plate)
+
+def send_text_to_raspi(filtered_string):
+    if filtered_string:
+        raspi_ip = 'ras'
+        raspi_url = f'http://{raspi_ip}:5001/receive_text'  
+        data = {'filtered_string': filtered_string}
+        response = requests.post(raspi_url, json=data)
+        if response.status_code == 200:
+            print('Văn bản đã được gửi đến RasPi thành công')
+        else:
+            print('Không thể gửi văn bản đến RasPi')
+
+def send_text_and_signal_to_raspi1(license_plate):
+    if license_plate:
+        send_text_to_raspi(license_plate)
+
+def send_text_to_raspi1(filtered_string):
+    if filtered_string:
+        raspi_ip = 'pi'
+        
+        raspi_url = f'http://{raspi_ip}:5001/receive_text'  
+        data = {'filtered_string': filtered_string}
+        response = requests.post(raspi_url, json=data)
+        if response.status_code == 200:
+            print('Văn bản đã được gửi đến RasPi thành công')
+        else:
+            print('Không thể gửi văn bản đến RasPi')
 
 
 @app.route('/videoplayback')
