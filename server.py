@@ -247,15 +247,15 @@ def process_db_operations(filtered_string, in_or_out):
                     checkin=current_time
                 )
                 db.session.add(new_stat_record)
-            else:
-                stat_record.checkout_time = current_time
 
         elif in_or_out == 'out':
+            print("----------------------------------------------------------------------")
             result = Manager.query.filter(
                 Manager.license_phate == filtered_string,
                 (Manager.checkout.is_(None))
             ).first()
             if result is not None:
+               
                 with open("static/cropped_image_out.jpg", 'rb') as f:
                     image_data = f.read()
                 result.checkout = datetime_VN
@@ -448,35 +448,48 @@ def send_text_to_raspi(filtered_string):
         else:
             print('Không thể gửi văn bản đến RasPi')
 
-def send_text_and_signal_to_raspi1(license_plate):
-    if license_plate:
-        send_text_to_raspi(license_plate)
+def send_text_and_signal_to_raspi1(license_plate1):
+    if license_plate1:
+        send_text_to_raspi1(license_plate1)
 
-def send_text_to_raspi1(filtered_string):
-    if filtered_string:
+def send_text_to_raspi1(filtered_string1):
+    if filtered_string1:
         raspi_ip = 'pi'
-        
         raspi_url = f'http://{raspi_ip}:5001/receive_text'  
-        data = {'filtered_string': filtered_string}
+        data = {'filtered_string': filtered_string1}
         response = requests.post(raspi_url, json=data)
         if response.status_code == 200:
             print('Văn bản đã được gửi đến RasPi thành công')
         else:
             print('Không thể gửi văn bản đến RasPi')
 
-
-@app.route('/videoplayback')
-def videoplayback():
-    global data
+@app.route('/videoplayback1')
+def videoplayback1():
     data = db.session.query(
+        User.id,
         User.name,
-        User.license_phate,
-        User.department,  # Thêm cột department vào câu truy vấn
+        User.license_phate,  # Sửa tên cột license_phate
+        User.department,  
         Manager.id,
         func.strftime('%Y-%m-%d %H:%M:%S', Manager.checkout).label('formatted_checkout'),
         func.strftime('%Y-%m-%d %H:%M:%S', Manager.checkin).label('formatted_checkin')
     ).join(Manager, User.license_phate == Manager.license_phate).all()
-    return render_template('table.html', data=data)
+    # Convert data to list of dictionaries for JSON serialization
+    data_dict = [
+        {'id': row.id,
+         'name': row.name,
+         'license_phate': row.license_phate,
+         'department': row.department,
+         'formatted_checkin': row.formatted_checkin,
+         'formatted_checkout': row.formatted_checkout
+        } for row in data
+    ]
+    return jsonify(data_dict)
+
+@app.route('/videoplayback')
+def videoplayback():
+  
+    return render_template('table.html')
 
 @app.route('/updateuser/<int:id_edit>', methods=["POST"])
 def updateuser(id_edit):

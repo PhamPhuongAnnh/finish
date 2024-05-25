@@ -17,15 +17,41 @@
         href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
         rel="stylesheet">
     <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/jquery.dataTables.min.js') }}"></script>
+    <!-- <script src="{{ url_for('static', filename='js/jquery.dataTables.min.js') }}"></script> -->
 
     <!-- Custom styles for this template-->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.css') }}">
+    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.css') }}"> -->
     <style>
+        /* CSS for the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            white-space: nowrap;
+            /* Prevent text wrapping */
+        }
+
+        /* CSS for even rows */
         .even-row {
             background-color: blanchedalmond;
-            /* Màu nền xám */
+        }
+
+        /* Set a fixed width for all columns except the time column */
+        td:not(:nth-child(5)) {
+            width: auto;
+        }
+
+        /* Set a fixed width for the time column */
+        td:nth-child(5) {
+            width: 150px;
+            /* Adjust the width as needed */
         }
     </style>
 </head>
@@ -166,22 +192,10 @@
                                             <th>Department</th>
                                             <th>Time To Enter</th>
                                             <th>Time Out</th>
-
                                         </tr>
                                     </thead>
-
-                                    <tbody>
-                                        {%for data in data %}
-                                        <tr {% if loop.index is even %} class="even-row" {% endif %}>
-                                            <td>{{data.id}}</td>
-                                            <td>{{data.name}}</td>
-                                            <td>{{data.license_phate}}</td>
-                                            <td>{{data.department}}</td>
-                                            <td>{{data.formatted_checkin if data.formatted_checkin else 'N/A' }}</td>
-                                            <td>{{data.formatted_checkout}}</td>
-
-                                        </tr>
-                                        {%endfor%}
+                                    <tbody id="tableBody">
+                                       
                                     </tbody>
                                 </table>
                             </div>
@@ -221,8 +235,8 @@
         <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
         <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
         <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
-        <script src="{{ url_for('static', filename='vendor/datatables/jquery.dataTables.min.js') }}"></script>
-        <script src="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.js') }}"></script>
+        <!-- <script src="{{ url_for('static', filename='vendor/datatables/jquery.dataTables.min.js') }}"></script> -->
+        <!-- <script src="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.js') }}"></script> -->
         <script src="{{ url_for('static', filename='js/demo/datatables-demo.js') }}"></script>
 </body>
 <script type="text/javascript" src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
@@ -230,6 +244,37 @@
 
 
 <script>
+    function fetchDataAndUpdateTable() {
+        // Perform AJAX request to fetch updated data
+        // Replace the URL with your actual endpoint to fetch data
+        fetch('/videoplayback1')
+            .then(response => response.json())
+            .then(data => {
+                // Sort the data by id in ascending order
+                data.sort((a, b) => a.id - b.id);
+
+                const tableBody = document.getElementById('tableBody');
+                tableBody.innerHTML = ''; // Clear existing table rows
+                data.forEach((row, index) => {
+                    let tableRow = `
+                    <tr class="${index % 2 === 0 ? 'even-row' : ''}">
+                        <td>${row.id}</td>
+                        <td class="name-column">${row.name}</td>
+                        <td>${row.license_phate}</td> 
+                        <td>${row.department}</td>
+                        <td>${row.formatted_checkin || 'N/A'}</td>
+                        <td>${row.formatted_checkout}</td>
+                    </tr>
+                `;
+                    tableBody.innerHTML += tableRow;
+                });
+            })
+            .catch(error => console.error('Error fetching data:', error));
+    }
+    // Initially load data when the page is loaded
+    fetchDataAndUpdateTable();
+    // Set interval to refresh data every 3 seconds
+    setInterval(fetchDataAndUpdateTable, 3000);
     // Kích hoạt dropdown menu khi nhấp vào biểu tượng tải xuống
     document.addEventListener('DOMContentLoaded', function () {
         var dropdownToggle = document.getElementById('dropdownMenuButton');
