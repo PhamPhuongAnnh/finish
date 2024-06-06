@@ -26,6 +26,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+from sqlalchemy import extract
 # _______________________________Khai báo__________________________________________________________________
 
 app = Flask(__name__,static_folder='static')               
@@ -159,6 +160,37 @@ def statisticals():
                 print(combined_data)
     return render_template('statistical.html', combined_data=combined_data)
 
+
+@app.route('/monthly_statistics', methods=['POST'])
+def monthly_statistics():
+    if request.method == 'POST':
+        data = request.get_json()
+        selected_month_str = data.get('selected_month')
+        selected_month = int(selected_month_str)
+        print(selected_month_str)  # Debug: Print the selected month
+
+        # Query data from the database
+        users = User.query.all()
+        statistics = Statistics.query.filter(extract('month', Statistics.current_date) == selected_month).all()
+
+        print(statistics)  # Debug: Print the queried statistics
+
+        combined_data = []
+
+        # Combine data from users and statistics
+        for stat in statistics:
+            user = next((u for u in users if u.license_phate == stat.license_plate), None)
+            if user:
+                combined_data.append({
+                    'date': stat.current_date.strftime('%Y-%m-%d'),  # Convert to string
+                    'username': user.name,
+                    'license_plate': user.license_phate,
+                    'checkin_time': str(stat.checkin_time),  # Convert to string
+                    'checkout_time': str(stat.checkout_time)  # Convert to string
+                })
+    
+        return jsonify(combined_data)
+    
 @app.route('/deleteuser/<int:id>')
 def deleteuser(id):
     global user
@@ -332,7 +364,6 @@ def video_out():
 def video():
     return render_template('test.html')
 
-
 def process_image(model, image, source):
     mytext = ""
     results = model(image)
@@ -432,8 +463,6 @@ def process_image(model, image, source):
         print(line2)
     print(mytext)
     return mytext
-
-
 
 def send_text_and_signal_to_raspi(license_plate):
     if license_plate:
@@ -590,6 +619,7 @@ def update_sensor():
 def get_sensor_data():
     total_obstacles = get_total_obstacles()
     return jsonify(total_obstacles)
+
 
 if __name__ == '__main__':
     

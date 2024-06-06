@@ -89,10 +89,10 @@
             </li>
             <!-- Nav Item - Utilities Collapse Menu -->
             <li class="nav-item">
-                <a class="nav-link collapsed" href="{{url_for('statisticals')}}" data-toggle="collapse"
-                    data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
-                    <i class="fas fa-fw fa-folder"></i>
-                    <span>Pages</span>
+                <a class="nav-link collapsed" href="{{url_for('logout')}}" data-toggle="collapse"
+                    data-target="#collapseUtilities" aria-expanded="true" aria-controls="collapseUtilities">
+                    <i class="fas fa-fw fa-wrench"></i>
+                    <span>Logout</span>
                 </a>
             </li>
 
@@ -106,8 +106,7 @@
 
             <!-- Nav Item - Pages Collapse Menu -->
             <li class="nav-item">
-                <a class="nav-link collapsed" href="{{url_for('statisticals')}}" data-toggle="collapse"
-                    data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
+                <a class="nav-link collapsed" href="{{url_for('statisticals')}}">
                     <i class="fas fa-fw fa-folder"></i>
                     <span>Pages</span>
                 </a>
@@ -208,7 +207,7 @@
                                         </tr>
 
                                         {% for user in users %}
-                                        <tr {% if loop.index is even %} class="even-row" {% endif %}>
+                                        <tr>
                                             <th>{{user.id}}</th>
                                             <td>{{user.name}}</td>
                                             <td>{{user.license_phate}}</td>
@@ -329,7 +328,7 @@
                     licensePlates: licensePlates,
                     department: department
                 },
-                success: function(response) {
+                success: function (response) {
                     // Xử lý phản hồi từ máy chủ (nếu cần)
                     console.log(response);
                     // Gỡ bỏ lớp 'show' từ modal và các phần tử liên quan
@@ -338,13 +337,13 @@
                     $('body').removeClass('modal-open');
                     location.reload();
                 },
-                error: function(error) {
+                error: function (error) {
                     // Xử lý lỗi (nếu có)
                     console.log(error);
                 }
             });
 
-            
+
         });
     });
     // Kích hoạt dropdown menu khi nhấp vào biểu tượng tải xuống

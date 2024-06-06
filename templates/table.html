@@ -116,8 +116,7 @@
 
             <!-- Nav Item - Pages Collapse Menu -->
             <li class="nav-item">
-                <a class="nav-link collapsed" href="{{url_for('statisticals')}}" data-toggle="collapse"
-                    data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
+                <a class="nav-link collapsed" href="{{url_for('statisticals')}}">
                     <i class="fas fa-fw fa-folder"></i>
                     <span>Pages</span>
                 </a>
@@ -257,7 +256,7 @@
                 tableBody.innerHTML = ''; // Clear existing table rows
                 data.forEach((row, index) => {
                     let tableRow = `
-                    <tr class="${index % 2 === 0 ? 'even-row' : ''}">
+                    <tr">
                         <td>${row.id}</td>
                         <td class="name-column">${row.name}</td>
                         <td>${row.license_phate}</td> 
