@@ -25,6 +25,7 @@ from sqlalchemy import LargeBinary
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 # _______________________________Khai báo__________________________________________________________________
 
 app = Flask(__name__,static_folder='static')               
@@ -296,9 +297,10 @@ def video_in():
     print("+++++++++++++++++++++++++++++++++++++++++++++++")
 
     if filtered_string_in:
-        send_text_and_signal_to_raspi(filtered_string_in)
+        send_thread = threading.Thread(target=send_text_and_signal_to_raspi, args=(filtered_string_in,))
+        send_thread.start()
         process_db_operations(filtered_string_in, 'in')
-
+        send_thread.join()
     return jsonify({"status": "success", "data": filtered_string_in})
 
 @app.route('/api/video/out', methods=['GET'])

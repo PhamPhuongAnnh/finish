@@ -67,7 +67,9 @@ def receive_filtered_string():
         lcd.printline(0, '                             ')
         lcd.printline(1, '                             ')
         lcd.printline(0, 'Bien So Xe: ')
-
+        set_angle_open(90)  # Điều chỉnh góc mở tùy thuộc vào servo
+        time.sleep(5)  # Chờ 5 phút
+        set_angle_open(0)    # Quay trở lại vị trí ban đầu
         lcd.printline(1, filtered_string)
         return {'status': 'success'}
     else:

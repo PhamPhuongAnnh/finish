@@ -225,12 +225,12 @@
                                             <div class="col-md-6 d-none d-md-block justify-content-center">
                                                 <button type="button" style="margin-top: 10px;"
                                                     class="btn btn-primary btn-block"
-                                                    onclick="openServo()">Open</button>
+                                                    onclick="openServo_enter()">Open</button>
                                             </div>
                                             <div class="col-md-6 d-none d-md-block justify-content-center">
                                                 <button type="button" style="margin-top: 10px;"
                                                     class="btn btn-primary btn-block"
-                                                    onclick="closeServo()">Close</button>
+                                                    onclick="closeServo_enter()">Close</button>
                                             </div>
                                         </div>
                                     </div>
@@ -243,12 +243,12 @@
                                             <div class="col-md-6 d-none d-md-block justify-content-center">
                                                 <button type="button" style="margin-top: 10px;"
                                                     class="btn btn-primary btn-block"
-                                                    onclick="openServo()">Open</button>
+                                                    onclick="openServo_exit()">Open</button>
                                             </div>
                                             <div class="col-md-6 d-none d-md-block justify-content-center">
                                                 <button type="button" style="margin-top: 10px;"
                                                     class="btn btn-primary btn-block"
-                                                    onclick="closeServo()">Close</button>
+                                                    onclick="closeServo_exit()">Close</button>
                                             </div>
                                         </div>
                                     </div>
@@ -267,16 +267,14 @@
                                         <div class="row">
                                             <div class="col-xl-6">
                                                 <p>Enter</p>
-                                                <img id="enter-image"
+                                                <img id="enter-image" class="reload" alt="Enter Image"
                                                     src="{{ url_for('static', filename='cropped_image_out.jpg') }}"
-                                                    alt="Enter Image"
                                                     style="width: 100%; height: auto; border: 2px solid #4e73df; border-radius: 10px;">
                                             </div>
                                             <div class="col-xl-6">
                                                 <p>Exit</p>
-                                                <img id="exit-image"
+                                                <img id="exit-image" class="reload" alt="Exit Image"
                                                     src="{{ url_for('static', filename='cropped_image_out.jpg') }}"
-                                                    alt="Exit Image"
                                                     style="width: 100%; height: auto; border: 2px solid #4e73df; border-radius: 10px;">
                                             </div>
                                         </div>
@@ -333,6 +331,40 @@
         <script src="{{ url_for('static', filename='js/demo/chart-area-demo.js') }}"></script>
         <script src="{{ url_for('static', filename='js/demo/chart-pie-demo.js') }}"></script>
         <script>
+            window.onload = () => {
+                const updateImages = () => {
+                    document.querySelectorAll("img.reload").forEach((el) => {
+                        if (el.complete) {
+                            el.src = el.src.split("?")[0] + "?" + new Date().getTime();
+                        }
+                    });
+                }
+                setInterval(updateImages, 200);
+            }
+
+            function callOutApi() {
+                fetch('/api/video/in')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Cập nhật dữ liệu từ API out vào phần tử HTML tương ứng
+                        document.getElementById('vehicle-status-text').textContent = data.data;
+                        console.log('Out API called', data);
+                        // if (data.status === 'success' & data.data != "") {
+                        //     fetch('http://ras:5001/open', {
+                        //         method: 'POST'
+                        //     })
+                        //         .then(response => response.json())
+                        //         .then(data => {
+                        //             console.log('Servo opened:', data);
+                        //         })
+                        //         .catch(error => console.error('Error opening servo:', error));
+                        // }
+
+                    })
+                    .catch(error => console.error('Error:', error));
+                setTimeout(callOutApi, 10000)
+            }
+
             function callInApi() {
                 fetch('/api/video/out')
                     .then(response => response.json())
@@ -342,25 +374,23 @@
                         document.getElementById('video-name').textContent = `Name: ${data.name || ''}`;
                         document.getElementById('video-department').textContent = `Department: ${data.department || ''}`;
                         document.getElementById('video-text').textContent = `License plate: ${data.data || ''}`;
-                        // Cập nhật URL của exit-image
                         console.log('Out API called', data);
+                        // if (data.status === 'success' & data.data != "") {
+                        //     fetch('http://pi:5001/open', {
+                        //         method: 'POST'
+                        //     })
+                        //         .then(response => response.json())
+                        //         .then(data => {
+                        //             console.log('Servo opened:', data);
+                        //         })
+                        //         .catch(error => console.error('Error opening servo:', error));
+                        // }
                     })
                     .catch(error => console.error('Error:', error));
+                setTimeout(callInApi, 10000)
             }
-            function callOutApi() {
-                fetch('/api/video/in')
-                    .then(response => response.json())
-                    .then(data => {
-                        // Cập nhật dữ liệu từ API out vào phần tử HTML tương ứng
-                        document.getElementById('vehicle-status-text').textContent = data.data;
-                        console.log('Out API called', data);
-                    })
-                    .catch(error => console.error('Error:', error));
-            }
-
-            setInterval(callInApi, 3000);
-            setInterval(callOutApi, 3000);
-
+            callInApi();
+            callOutApi();
             function updateSpaces() {
                 const xhr = new XMLHttpRequest();
                 xhr.open('GET', '/get_sensor_data', true);
@@ -414,14 +444,27 @@
                     videoElement1.src = 'http://100.74.97.91:8080/stream.html';
                 }
             });
-            function openServo() {
+            function openServo_enter() {
                 // alert('Mở cửa thành công');
-                fetch('http://ras:5001/close', {
+                fetch('http://ras:5001/open', {
                     method: 'POST'
                 });
             }
 
-            function closeServo() {
+            function closeServo_enter() {
+                // alert('Đóng cửa thành công');
+                fetch('http://ras:5001/close', {
+                    method: 'POST'
+                });
+            }
+            function openServo_exit() {
+                // alert('Mở cửa thành công');
+                fetch('http://pi:5001/open', {
+                    method: 'POST'
+                });
+            }
+
+            function closeServo_exit() {
 
                 // alert('Đóng cửa thành công');
                 fetch('http://pi:5001/close', {

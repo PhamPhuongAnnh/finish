@@ -241,7 +241,8 @@
                         <div class="calendar" id="calendarContainer">
                             <div class="header">
                                 <button id="prevMonth">&lt;</button>
-                                <h2 id="monthYear"></h2>
+                                <input type="month" id="monthYearInput">
+                                <button id="selectMonthYearBtn">Select</button>
                                 <button id="nextMonth">&gt;</button>
                             </div>
                             <div class="weekdays">
@@ -304,13 +305,22 @@
     document.addEventListener('DOMContentLoaded', function () {
         const prevMonthBtn = document.getElementById('prevMonth');
         const nextMonthBtn = document.getElementById('nextMonth');
-        const monthYearText = document.getElementById('monthYear');
+        const monthYearInput = document.getElementById('monthYearInput');
+        const selectMonthYearBtn = document.getElementById('selectMonthYearBtn');
         const daysContainer = document.getElementById('daysContainer');
         const calendarIcon = document.getElementById('calendarIcon');
-        const calendarContainer = document.getElementById('calendarContainer');
+        document.getElementById('calendarContainer');
+        let currentDate = new Date(); // Current date
 
-        let currentDate = new Date(); // Ngày hiện tại
-
+        selectMonthYearBtn.addEventListener('click', function () {
+            const selectedDate = new Date(monthYearInput.value);
+            if (!isNaN(selectedDate.getTime())) {
+                currentDate = selectedDate;
+                renderCalendar();
+            } else {
+                alert('Invalid date format. Please select a valid month and year.');
+            }
+        });
         calendarIcon.addEventListener('click', function () {
 
             calendarContainer.style.display = calendarContainer.style.display === 'none' ? 'block' : 'none';
@@ -320,16 +330,14 @@
             calendarContainer.style.right = '122px';
 
         });
-
         function renderCalendar() {
-            const today = new Date(); // Lấy ngày hiện tại
             const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
             const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
             const daysInMonth = lastDayOfMonth.getDate();
             const startingDayOfWeek = firstDayOfMonth.getDay();
             const monthYearString = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-            monthYearText.textContent = monthYearString;
+            monthYearInput.value = currentDate.toISOString().slice(0, 7); // Set input value to current month and year
 
             daysContainer.innerHTML = '';
 
@@ -342,15 +350,15 @@
                 const day = document.createElement('div');
                 day.textContent = i;
 
-                // Kiểm tra xem ngày hiện tại có phải là ngày được xử lý không
-                if (currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() === today.getMonth() && i === today.getDate()) {
-                    day.classList.add('today'); // Thêm class 'today' để áp dụng kiểu dáng khác
+                // Check if the current date is the selected date
+                if (currentDate.getDate() === i) {
+                    day.classList.add('selected'); // Add 'selected' class to apply different styling
                 }
 
                 day.addEventListener('click', function () {
                     const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), i);
                     const formattedDate = formatDate(selectedDate);
-                    sendDataToServer(formattedDate); // Gửi thông tin ngày được chọn về server
+                    sendDataToServer(formattedDate); // Send selected date info to server
                 });
 
                 daysContainer.appendChild(day);
@@ -374,7 +382,7 @@
             })
                 .then(response => {
                     if (response.ok) {
-                        return response.text(); // Trả về response dưới dạng text để render lại
+                        return response.text(); // Return response as text to render
                     } else {
                         console.error('Failed to send data to server');
                     }
