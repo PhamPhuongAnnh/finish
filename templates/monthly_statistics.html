@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Manage</title>
+
+    <!-- Custom fonts for this template-->
+    <link rel="stylesheet" href="{{url_for('static', filename='vendor/fontawesome-free/css/all.min.css')}}">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/jquery.dataTables.min.js') }}"></script>
+
+    <!-- Custom styles for this template-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.css') }}">
+    <!-- Other meta tags and links -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Font Awesome CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+    <!-- Your other stylesheets -->
+    <style>
+        .calendar {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 1000;
+            background-color: white;
+            border: 1px solid #ddd;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-size: 13px;
+            text-transform: capitalize;
+            font-family: initial;
+        }
+
+        .calendar .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .calendar .weekdays,
+        .calendar .days {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .calendar .weekdays div,
+        .calendar .days div {
+            width: 14.28%;
+            text-align: center;
+        }
+
+        .calendar .days div {
+            cursor: pointer;
+            padding: 5px 0;
+        }
+
+        .calendar .days div.today {
+            font-weight: bold;
+            background-color: #007bff;
+            color: white;
+            border-radius: 50%;
+        }
+
+        .bold-icon {
+            font-weight: bold;
+            color: white;
+        }
+
+        .even-row {
+            background-color: blanchedalmond;
+            /* Màu nền xám */
+        }
+
+        /* Custom CSS styles for the dropdown menu */
+        .dropdown-menu {
+            min-width: 100%;
+            /* Đảm bảo dropdown menu có độ rộng bằng với nút bấm */
+            background-color: #fff;
+            /* Màu nền cho dropdown menu */
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            /* Viền cho dropdown menu */
+            border-radius: 0.25rem;
+            /* Độ cong viền cho dropdown menu */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            /* Đổ bóng cho dropdown menu */
+        }
+
+        .dropdown-item {
+            color: #333;
+            /* Màu chữ cho các mục trong dropdown menu */
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item:focus {
+            background-color: #f8f9fa;
+            /* Màu nền khi hover hoặc focus vào mục */
+        }
+
+        .btn-group {
+            position: relative;
+            /* Vị trí tương đối cho btn-group để điều chỉnh vị trí dropdown menu */
+        }
+
+        .btn-primary {
+            color: #fff;
+            /* Màu chữ cho nút bấm */
+            background-color: #007bff;
+            /* Màu nền cho nút bấm */
+            border-color: #007bff;
+            /* Màu viền cho nút bấm */
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus {
+            background-color: #0056b3;
+            /* Màu nền khi hover hoặc focus vào nút bấm */
+            border-color: #0056b3;
+            /* Màu viền khi hover hoặc focus vào nút bấm */
+        }
+
+        .bold-icon {
+            font-weight: bold;
+            /* Đậm chữ cho biểu tượng trong nút bấm */
+        }
+
+        /* CSS cho ô chứa nút */
+        .info-button-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* CSS cho nút "Thông tin" */
+        .info-button {
+            background-color: #4CAF50;
+            /* Màu nền của nút */
+            border: none;
+            /* Loại bỏ đường viền */
+            color: white;
+            /* Màu chữ */
+            padding: 10px 20px;
+            /* Kích thước nút */
+            text-align: center;
+            /* Canh lề văn bản vào giữa */
+            text-decoration: none;
+            /* Loại bỏ gạch chân */
+            border-radius: 20px;
+            /* Bo tròn góc */
+            transition-duration: 0.4s;
+            /* Thời gian chuyển đổi */
+            cursor: pointer;
+            /* Con trỏ chuột khi di chuột vào nút */
+        }
+
+        .info-button:hover {
+            background-color: #45a049;
+            /* Màu nền khi di chuột vào */
+        }
+
+        /* CSS cho biểu tượng Font Awesome */
+        .info-icon {
+            margin-right: 5px;
+            /* Khoảng cách giữa biểu tượng và văn bản */
+        }
+
+        /* CSS cho modal */
+        .modal {
+            display: none;
+            /* Mặc định ẩn modal */
+            position: fixed;
+            /* Cố định modal ở vị trí cố định */
+            z-index: 9999;
+            /* Chỉ số z để modal hiển thị trên các phần khác */
+            left: 50%;
+            /* Đặt modal ở giữa theo chiều ngang */
+            top: 50%;
+            /* Đặt modal ở giữa theo chiều dọc */
+            transform: translate(-50%, -50%);
+            /* Dịch modal đi để nó hiển thị chính xác ở giữa */
+            width: 50%;
+            /* Chiều rộng bằng nửa màn hình */
+            height: 66vh;
+            /* Chiều cao bằng 2/3 màn hình */
+            overflow-y: auto;
+            /* Hiển thị thanh cuộn dọc nếu nội dung quá dài */
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            padding: 20px;
+            border: 2px solid #888;
+            border-radius: 5px;
+            /* Bo tròn góc */
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+            /* Hiệu ứng bóng đổ */
+        }
+
+        /* Đóng modal */
+        .close {
+            color: #000000;
+            /* Màu của nút đóng */
+            float: right;
+            /* Hiển thị nút đóng ở bên phải */
+            font-size: 28px;
+            /* Kích thước chữ của nút đóng */
+            font-weight: bold;
+            /* Đậm chữ của nút đóng */
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            /* Màu của nút đóng khi di chuột qua hoặc tập trung vào */
+            text-decoration: none;
+            /* Không gạch chân nút đóng */
+            cursor: pointer;
+            /* Con trỏ thành hình bàn tay khi di chuột qua */
+        }
+    </style>
+</head>
+
+<body id="page-top">
+
+    <!-- Page Wrapper -->
+    <div id="wrapper">
+
+        <!-- Sidebar -->
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+
+            <!-- Sidebar - Brand -->
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="#">
+                <div class="sidebar-brand-icon rotate-n-15">
+                    <i class="fas fa-laugh-wink"></i>
+                </div>
+                <div class="sidebar-brand-text mx-3">Admin <sup>2</sup></div>
+            </a>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider my-0">
+
+            <!-- Nav Item - Dashboard -->
+            <li class="nav-item active">
+                <a class="nav-link" href="{{url_for('video')}}">
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>Dashboard</span></a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Heading -->
+
+
+            <!-- Nav Item - Pages Collapse Menu -->
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="{{url_for('logout')}}" data-toggle="collapse"
+                    data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
+                    <i class="fas fa-fw fa-cog"></i>
+                    <span>Login</span>
+                </a>
+
+            </li>
+            <!-- Nav Item - Utilities Collapse Menu -->
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="{{url_for('logout')}}" data-toggle="collapse"
+                    data-target="#collapseUtilities" aria-expanded="true" aria-controls="collapseUtilities">
+                    <i class="fas fa-fw fa-wrench"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Heading -->
+            <div class="sidebar-heading">
+                About
+            </div>
+
+            <!-- Nav Item - Pages Collapse Menu -->
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="{{url_for('monthly')}}">
+                    <i class="fas fa-chart-bar bold-icon"></i>
+                    <span>Statistics</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="{{url_for('statisticals')}}">
+                    <i class="fas fa-fw fa-folder"></i>
+                    <span>Pages</span>
+                </a>
+            </li>
+            <!-- Nav Item - Charts -->
+            <li class="nav-item">
+                <a class="nav-link" href="{{url_for('admin')}}">
+                    <i class="fas fa-fw fa-chart-area"></i>
+                    <span>User</span></a>
+            </li>
+
+            <!-- Nav Item - Tables -->
+            <li class="nav-item">
+                <a class="nav-link" href="{{url_for('videoplayback')}}">
+                    <i class="fas fa-fw fa-table"></i>
+                    <span>History</span></a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider d-none d-md-block">
+
+            <!-- Sidebar Toggler (Sidebar) -->
+            <div class="text-center d-none d-md-inline">
+                <button class="rounded-circle border-0" id="sidebarToggle"></button>
+            </div>
+
+            <!-- Sidebar Message -->
+
+
+        </ul>
+        <!-- End of Sidebar -->
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+
+            <!-- Main Content -->
+            <div id="content">
+                <!-- Begin Page Content -->
+                <div class="container-fluid" style="margin-top: 15px;">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center"
+                            style="background-color: #007bff;">
+                            <h6 class="m-0 font-weight-bold text-white">DataTables</h6>
+
+                            <div class="d-flex align-items-center">
+                                <!-- Icon lịch -->
+
+
+                                <div class="btn-group" style="margin-left: 5px;">
+                                    <button class="btn btn-primary dropdown-toggle" type="button"
+                                        id="monthDropdownButton" data-toggle="dropdown" aria-haspopup="true"
+                                        aria-expanded="false">
+                                        <i class="fas fa-chart-bar bold-icon"></i>
+                                    </button>
+                                    <div class="dropdown-menu" aria-labelledby="monthDropdownButton">
+                                        <!-- Dropdown menu items for months -->
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(1);  hideDropdown()">January</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(2);  hideDropdown()">February</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(3);  hideDropdown()">March</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(4);  hideDropdown()">April</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(5);  hideDropdown()">May</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(6);  hideDropdown()">June</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(7);  hideDropdown()">July</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(8);  hideDropdown()">August</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(9);  hideDropdown()">September</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(10); hideDropdown()">October</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(11); hideDropdown()">November</a>
+                                        <a class="dropdown-item" href="#"
+                                            onclick="getStatistics(12); hideDropdown()">December</a>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown ml-2">
+                                    <button style="background-color: #007bff; color: white;" class="btn dropdown-toggle"
+                                        type="button" id="dropdownMenuButton" data-toggle="dropdown"
+                                        aria-haspopup="true" aria-expanded="false" onclick="downloadCSV()">
+                                        <i class="fas fa-download fa-sm"></i> <!-- Biểu tượng tải xuống nhỏ -->
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr style="background-color:chocolate; color: white;">
+                                            <th>STT</th>
+                                            <th>Name</th>
+                                            <th>License Plates</th>
+                                            <th>Department</th>
+                                            <th>Days word</th>
+                                            <th>Option</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <td colspan="6" class="text-center">No data</td>
+                                        {% for data in combined_data %}
+                                        <tr>
+                                            <td>{{ data.user.data }}</td>
+                                            <td>{{ data.user.name }}</td>
+                                            <td>{{ data.user.license_plate }}</td>
+                                            <td>{{ data.user.department }}</td>
+                                            <td>{{ data.monthly_statistics}}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+
+                                </table>
+                            </div>
+                        </div>
+
+
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+        <a class="scroll-to-top rounded" href="#page-top">
+            <i class="fas fa-angle-up"></i>
+        </a>
+
+        <!-- Modal -->
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <div id="modalContent">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" style="border: #000000;" id="dataTable1" width="100%"
+                            cellspacing="0">
+                            <thead>
+                                <tr style="background-color:chocolate; color: white;">
+                                    <th>Date</th>
+                                    <th>Username</th>
+                                    <th>Car License</th>
+                                    <th>Time Check In</th>
+                                    <th>Time Check Out</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for data in combined_data %}
+                                <tr>
+                                    <td>{{ data.statistics.current_date }}</td>
+                                    <td>{{ data.user.name }}</td>
+                                    <td>{{ data.user.license_plate }}</td>
+                                    <td>{{ data.statistics.checkin_time }}</td>
+                                    <td>{{ data.statistics.checkout_time }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Bootstrap core JavaScript-->
+        <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='vendor/datatables/jquery.dataTables.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/demo/datatables-demo.js') }}"></script>
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/en-gb.js"></script>
+
+</body>
+<script type="text/javascript" src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.5.1.min.js') }}"></script>
+
+
+<script>
+    function downloadCSV() {
+        // Lấy danh sách các hàng trong bảng
+        var tableRows = document.querySelectorAll('#dataTable1 tbody tr');
+
+        // Tạo một mảng chứa dữ liệu từ các hàng
+        var csvContent = "data:text/csv;charset=utf-8,";
+        tableRows.forEach(function (row) {
+            var rowData = [];
+            var cells = row.querySelectorAll('td');
+            cells.forEach(function (cell, index) {
+                // Thêm nội dung của mỗi ô vào mảng dữ liệu
+                if (index === cells.length - 1) {
+                    rowData.push(cell.textContent.trim()); // Đây là ô cuối cùng, không cần thêm dấu phẩy
+                } else {
+                    rowData.push(cell.textContent.trim() + ','); // Thêm dấu phẩy sau mỗi ô, trừ ô cuối cùng
+                }
+            });
+            csvContent += rowData.join("") + "\n"; // Kết hợp dữ liệu trong mỗi hàng và thêm dòng mới
+        });
+
+        // Tạo một URL cho dữ liệu CSV
+        var encodedUri = encodeURI(csvContent);
+
+        // Tạo một thẻ 'a' ẩn để tải xuống CSV
+        var link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "data.csv");
+        document.body.appendChild(link); // Thêm thẻ 'a' vào body của trang
+
+        // Kích hoạt sự kiện click trên thẻ 'a' để tải xuống
+        link.click();
+    }
+
+
+    function showUserInfo(licensePlate, selectedMonth) {
+        // Gửi yêu cầu lấy thông tin chi tiết của xe tới máy chủ
+        fetch('/monthly_lincese', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ license_plate: licensePlate, selected_month: selectedMonth })
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Xử lý dữ liệu trả về từ server ở đây
+                console.log(data); // Kiểm tra dữ liệu trên console (có thể bỏ đi sau khi đã hoạt động ổn định)
+
+                const tableBody = document.querySelector('#dataTable1 tbody');
+                tableBody.innerHTML = ''; // Xóa dữ liệu cũ trong tbody trước khi hiển thị dữ liệu mới
+
+                if (data.length === 0) {
+                    // Nếu không có dữ liệu, hiển thị thông báo "No data"
+                    const noDataRow = `
+                        <tr>
+                            <td colspan="5" class="text-center">No data</td>
+                        </tr>
+                        `;
+                    tableBody.insertAdjacentHTML('beforeend', noDataRow);
+                } else {
+                    // Nếu có dữ liệu, lặp qua dữ liệu và hiển thị trên bảng
+                    data.forEach(item => {
+                        const row = `
+    <tr>
+        <td>${item.date}</td>
+        <td>${item.username}</td>
+        <td>${item.license_plate}</td>
+        <td>${item.checkin_time}</td>
+        <td>${item.checkout_time}</td>
+    </tr>
+`;
+                        tableBody.insertAdjacentHTML('beforeend', row); // Chèn hàng mới vào tbody
+                    });
+                }
+
+                // Hiển thị modal
+                const modal = document.getElementById('myModal');
+                modal.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    // Hàm để đóng modal
+    function closeModal() {
+        const modal = document.getElementById('myModal');
+        modal.style.display = 'none';
+    }
+
+    function getStatistics(month) {
+        // Gửi yêu cầu lấy dữ liệu theo tháng tới server
+        fetch('/monthly_day', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ selected_month: month })
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                const tableBody = document.querySelector('tbody');
+                tableBody.innerHTML = ''; // Xóa nội dung cũ của bảng trước khi cập nhật
+
+                if (data.length === 0) {
+                    // Nếu không có dữ liệu, hiển thị thông báo "No data"
+                    const noDataRow = `
+                <tr>
+                    <td colspan="6" class="text-center">No data</td>
+                </tr>
+            `;
+                    tableBody.insertAdjacentHTML('beforeend', noDataRow);
+                } else {
+                    // Nếu có dữ liệu, lặp qua và cập nhật nội dung của bảng
+                    data.forEach(item => {
+                        const row = `
+                    <tr>
+                        <td>${item.user.id}</td>
+                        <td>${item.user.name}</td>
+                        <td>${item.user.license_plate}</td>
+                        <td>${item.user.department}</td>
+                        <td>${item.monthly_statistics}</td>
+                        <td style="text-align: center;">
+                            <button class="info-button" onclick="showUserInfo('${item.user.license_plate}', '${item.selected_month}')">
+        <i class="fas fa-info-circle info-icon"></i> Information
+    </button>
+                            </td>
+                    </tr>
+                `;
+                        tableBody.insertAdjacentHTML('beforeend', row);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+
+    // Kích hoạt dropdown menu khi nhấp vào biểu tượng tải xuống
+    document.addEventListener('DOMContentLoaded', function () {
+        var dropdownToggle = document.getElementById('dropdownMenuButton');
+        dropdownToggle.addEventListener('click', function () {
+            var dropdownMenu = dropdownToggle.nextElementSibling;
+            dropdownMenu.classList.toggle('show');
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var dropdownmonth = document.getElementById('monthDropdownButton');
+        dropdownmonth.addEventListener('click', function () {
+            var dropdownMenu = dropdownmonth.nextElementSibling;
+            dropdownMenu.classList.toggle('show');
+        });
+    });
+
+    $(document).ready(function () {
+        jQuery.noConflict();
+        // console.log(1111);
+        $('#dataTable').DataTable({});
+    });
+
+
+    function hideDropdown() {
+        var dropdownMenu = document.querySelector('.dropdown-menu');
+        dropdownMenu.classList.remove('show');
+    }
+</script>
+</body>
+
+</html>

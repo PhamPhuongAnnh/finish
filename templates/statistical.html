@@ -201,12 +201,17 @@
 
             <!-- Nav Item - Pages Collapse Menu -->
             <li class="nav-item">
+                <a class="nav-link collapsed" href="{{url_for('monthly')}}">
+                    <i class="fas fa-chart-bar bold-icon"></i>
+                    <span>Statistics</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="{{url_for('statisticals')}}">
                     <i class="fas fa-fw fa-folder"></i>
                     <span>Pages</span>
                 </a>
             </li>
-
             <!-- Nav Item - Charts -->
             <li class="nav-item">
                 <a class="nav-link" href="{{url_for('admin')}}">
@@ -291,19 +296,10 @@
                                 <div class="dropdown ml-2">
                                     <button style="background-color: #007bff; color: white;" class="btn dropdown-toggle"
                                         type="button" id="dropdownMenuButton" data-toggle="dropdown"
-                                        aria-haspopup="true" aria-expanded="false">
+                                        aria-haspopup="true" aria-expanded="false" onclick="downloadCSV()">
                                         <i class="fas fa-download fa-sm"></i> <!-- Biểu tượng tải xuống nhỏ -->
                                     </button>
-                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
-                                        <!-- Các mục menu dropdown -->
-                                        <a class="dropdown-item" href="#"
-                                            onclick="downloadCSV('manage'); hideDropdown()">Manage</a>
-                                        <a class="dropdown-item" href="#"
-                                            onclick="downloadCSV('user'); hideDropdown()">User</a>
-                                        <a class="dropdown-item" href="#"
-                                            onclick="downloadCSV('in_and_out'); hideDropdown()">Information in and
-                                            out</a>
-                                    </div>
+
                                 </div>
                             </div>
                         </div>
@@ -321,12 +317,11 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <td colspan="5" class="text-center">No data</td>
                                         {% for data in combined_data %}
                                         <tr>
                                             <td>{{ data.statistics.current_date }}</td>
                                             <td>{{ data.user.name }}</td>
-                                            <td>{{ data.user.license_plate }}</td>
+                                            <td>{{ data.user.license_phate }}</td>
                                             <td>{{ data.statistics.checkin_time }}</td>
                                             <td>{{ data.statistics.checkout_time }}</td>
                                         </tr>
@@ -407,6 +402,39 @@
 
 
 <script>
+    function downloadCSV() {
+        // Lấy danh sách các hàng trong bảng
+        var tableRows = document.querySelectorAll('#dataTable tbody tr');
+
+        // Tạo một mảng chứa dữ liệu từ các hàng
+        var csvContent = "data:text/csv;charset=utf-8,";
+        tableRows.forEach(function (row) {
+            var rowData = [];
+            var cells = row.querySelectorAll('td');
+            cells.forEach(function (cell, index) {
+                // Thêm nội dung của mỗi ô vào mảng dữ liệu
+                if (index === cells.length - 1) {
+                    rowData.push(cell.textContent.trim()); // Đây là ô cuối cùng, không cần thêm dấu phẩy
+                } else {
+                    rowData.push(cell.textContent.trim() + ','); // Thêm dấu phẩy sau mỗi ô, trừ ô cuối cùng
+                }
+            });
+            csvContent += rowData.join("") + "\n"; // Kết hợp dữ liệu trong mỗi hàng và thêm dòng mới
+        });
+
+        // Tạo một URL cho dữ liệu CSV
+        var encodedUri = encodeURI(csvContent);
+
+        // Tạo một thẻ 'a' ẩn để tải xuống CSV
+        var link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "data.csv");
+        document.body.appendChild(link); // Thêm thẻ 'a' vào body của trang
+
+        // Kích hoạt sự kiện click trên thẻ 'a' để tải xuống
+        link.click();
+    }
+
     function getStatistics(month) {
         // Gửi yêu cầu lấy dữ liệu theo tháng tới server
         fetch('/monthly_statistics', {
@@ -590,33 +618,7 @@
         $('#dataTable').DataTable({});
     });
 
-    // Hàm xử lý việc tải dữ liệu CSV từ server
-    function downloadCSV(table) {
-        // Tạo yêu cầu AJAX để tải dữ liệu CSV từ Flask route
-        $.ajax({
-            type: 'GET',
-            url: `/download/${table}`,
-            success: function (response) {
-                // Tạo một đường dẫn tạm thời và tạo một liên kết ẩn để tải về tệp CSV
-                var blob = new Blob([response], { type: 'text/csv' });
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = `${table}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                // Hiển thị thông báo tải xuống thành công
-
-            },
-            error: function (xhr, status, error) {
-                // Hiển thị thông báo lỗi nếu có lỗi xảy ra
-                alert(`An error occurred while downloading CSV file: ${error}`);
-            }
-        });
-    }
-
+    
     function hideDropdown() {
         var dropdownMenu = document.querySelector('.dropdown-menu');
         dropdownMenu.classList.remove('show');

@@ -81,6 +81,12 @@
 
             <!-- Nav Item - Pages Collapse Menu -->
             <li class="nav-item">
+                <a class="nav-link collapsed" href="{{url_for('monthly')}}">
+                    <i class="fas fa-chart-bar bold-icon"></i>
+                    <span>Statistics</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="{{url_for('statisticals')}}">
                     <i class="fas fa-fw fa-folder"></i>
                     <span>Pages</span>
@@ -130,13 +136,7 @@
                     <form
                         class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
                         <div class="input-group">
-                            <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..."
-                                aria-label="Search" aria-describedby="basic-addon2">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="button">
-                                    <i class="fas fa-search fa-sm"></i>
-                                </button>
-                            </div>
+                            <P>ACTVN</P>
                         </div>
                     </form>
 
@@ -201,7 +201,7 @@
                                                     </div>
                                                     <!-- Cập nhật ID của phần tử để phù hợp với JavaScript -->
                                                     <div class="h5 mb-0 font-weight-bold text-gray-800"
-                                                        id="vehicle-status-text"></div>
+                                                        id="vehicle-status-text"> {{filtered_string_in}}</div>
                                                 </div>
                                                 <div class="col-auto">
                                                     <i class="fas fa-comments fa-2x text-gray-300"></i>
@@ -300,12 +300,13 @@
         <a class="scroll-to-top rounded" href="#page-top">
             <i class="fas fa-angle-up"></i>
         </a>
-
+        <!-- <div id="result"></div> -->
+        <button id="confirmButton" style="display:none;" onclick="confirmSendTextApi()">Confirm Send</button>
         <!-- Logout Modal-->
         <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
             aria-hidden="true">
             <div class="modal-dialog" role="document">
-                <div class="modal-content">
+                <div class="modal-content">F
                     <div class="modal-header">
                         <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
                         <button class="close" type="button" data-dismiss="modal" aria-label="Close">
@@ -341,6 +342,7 @@
                 setInterval(updateImages, 200);
             }
 
+
             function callOutApi() {
                 fetch('/api/video/in')
                     .then(response => response.json())
@@ -361,8 +363,10 @@
 
                     })
                     .catch(error => console.error('Error:', error));
-                setTimeout(callOutApi, 10000)
+                setTimeout(callOutApi, 5000)
             }
+
+
 
             function callInApi() {
                 fetch('/api/video/out')
@@ -386,7 +390,7 @@
                         // }
                     })
                     .catch(error => console.error('Error:', error));
-                setTimeout(callInApi, 10000)
+                setTimeout(callInApi, 5000)
             }
             callInApi();
             callOutApi();
@@ -394,6 +398,7 @@
                 const xhr = new XMLHttpRequest();
                 xhr.open('GET', '/get_sensor_data', true);
                 xhr.onreadystatechange = function () {
+
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         document.getElementById('spaces-content').innerHTML = xhr.responseText;
                     }
@@ -405,7 +410,91 @@
             setInterval(updateSpaces, 1000);
             // Gọi hàm lần đầu tiên để tải nội dung ngay khi trang được tải
             updateSpaces();
+            let flag = 0;
 
+            function callSendTextApi() {
+                fetch('/api/send_text_in', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === "success") {
+                            console.log('Success:', data);
+                            confirmSendTextApi();  // Automatically confirm if success
+                            flag = 0;
+                        } else if (data.status === "failure_nodata") {
+                            //alert("oki")
+                            if (flag == 0) {
+                                console.error('Failure:', data);
+                                // document.getElementById('result').innerText = "Failure: " + (data.error || "Unknown error");
+                                if (data.error === "License plate not found. Confirm to proceed.") {
+                                    if (confirm(data.error)) {
+                                        confirmSendTextApi();
+                                    }
+                                }
+                                flag = 1;
+                            }
+
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                        document.getElementById('result').innerText = `Error: ${error}`;
+                    });
+            }
+
+            function confirmSendTextApi() {
+                fetch('/api/confirm_send_text_in', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === "success") {
+                            console.log('Confirmation Success:', data);
+                            // document.getElementById('result').innerText = "Confirmation Success";
+                        } else {
+                            console.error('Confirmation Failure:', data);
+                            // document.getElementById('result').innerText = "Confirmation Failure: " + (data.error || "Unknown error");
+                        }
+                        document.getElementById('confirmButton').style.display = "none";
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                        // document.getElementById('result').innerText = `Error: ${error}`;
+                        document.getElementById('confirmButton').style.display = "none";
+                    });
+            }
+            function callSendTexOuttApi() {
+                fetch('/api/send_text_out', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Success:', data);
+                        document.getElementById('result').innerText = JSON.stringify(data);
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                        document.getElementById('result').innerText = `Error: ${error}`;
+                    });
+            }
+
+            // Call the API every 5 seconds
+            setInterval(callSendTexOuttApi, 5000);
+            // Call the API every 5 seconds
+            setInterval(callSendTextApi, 5000);
             function updateDateTime() {
                 // Lấy ngày tháng hiện tại
                 var today = new Date();

@@ -160,6 +160,9 @@ def statisticals():
                 print(combined_data)
     return render_template('statistical.html', combined_data=combined_data)
 
+@app.route('/monthly', methods=['GET', 'POST'])
+def monthly():
+    return render_template('monthly_statistics.html')
 
 @app.route('/monthly_statistics', methods=['POST'])
 def monthly_statistics():
@@ -188,9 +191,82 @@ def monthly_statistics():
                     'checkin_time': str(stat.checkin_time),  # Convert to string
                     'checkout_time': str(stat.checkout_time)  # Convert to string
                 })
-    
+
         return jsonify(combined_data)
     
+@app.route('/monthly_day', methods=['POST'])
+def monthly_day():
+    selected_month = request.json.get('selected_month')  # Lấy tháng được chọn từ yêu cầu POST
+
+    # Tính ngày đầu tiên và cuối cùng của tháng được chọn
+    first_day = datetime(year=datetime.now().year, month=selected_month, day=1).date()
+    if selected_month == 12:
+        last_day = datetime(year=datetime.now().year+1, month=1, day=1).date()
+    else:
+        last_day = datetime(year=datetime.now().year, month=selected_month+1, day=1).date()
+
+    # Truy vấn cơ sở dữ liệu để lấy dữ liệu thống kê theo tháng
+    monthly_statistics = db.session.query(User, db.func.count(Statistics.id)) \
+                                    .outerjoin(Statistics, User.license_phate == Statistics.license_plate) \
+                                    .filter(Statistics.current_date >= first_day) \
+                                    .filter(Statistics.current_date < last_day) \
+                                    .group_by(User.id) \
+                                    .all()
+
+    # Tạo một từ điển để lưu trữ số ngày làm việc của từng user
+    days_worked_dict = {user.id: days_worked for user, days_worked in monthly_statistics}
+
+    # Truy vấn tất cả các user
+    all_users = User.query.all()
+
+    # Format dữ liệu trả về
+    data = []
+    for user in all_users:
+        days_worked = days_worked_dict.get(user.id, 0)  # Lấy số ngày làm việc, nếu không tồn tại thì trả về 0
+        data.append({
+            'user': {
+                'id': user.id,
+                'name': user.name,
+                'license_plate': user.license_phate,
+                'department': user.department
+            },
+            'monthly_statistics': days_worked,
+            'selected_month': selected_month
+        })
+
+    return jsonify(data)
+
+@app.route('/monthly_lincese', methods=['POST'])
+def monthly_lincese():
+    data = request.json
+    license_plate = data.get('license_plate')
+    selected_month = data.get('selected_month')
+    print(license_plate)
+    print(selected_month)
+    users = User.query.all()
+    statistics = Statistics.query.filter(
+    extract('month', Statistics.current_date) == selected_month,
+    Statistics.license_plate == license_plate
+    ).all()
+
+    print(statistics)  # Debug: Print the queried statistics
+
+    combined_data = []
+
+        # Combine data from users and statistics
+    for stat in statistics:
+        user = next((u for u in users if u.license_phate == license_plate), None)
+        if user:
+            combined_data.append({
+            'date': stat.current_date.strftime('%Y-%m-%d'),  # Convert to string
+            'username': user.name,
+            'license_plate': user.license_phate,
+            'checkin_time': str(stat.checkin_time),  # Convert to string
+            'checkout_time': str(stat.checkout_time)  # Convert to string
+            })
+
+    return jsonify(combined_data)
+
 @app.route('/deleteuser/<int:id>')
 def deleteuser(id):
     global user
@@ -314,8 +390,89 @@ def process_db_operations(filtered_string, in_or_out):
         db.session.commit()
     return "", "", ""
 
+license_plate_string = None
+license_plate_string_out = None
+
 @app.route('/api/video/in', methods=['GET'])
 def video_in():
+    global license_plate_string
+    img_url_in = "http://ras:8080/?action=snapshot.jpg"
+    try:
+        filtered_string_in = fetch_and_process_image(img_url_in, ('ras', '1'), model, 'ras')
+    except Exception as exc:
+        print(f"in generated an exception: {exc}")
+        filtered_string_in = None
+
+    if filtered_string_in:
+        license_plate_string = filtered_string_in
+        print("Debug: license_plate_string set to", license_plate_string)
+        process_db_operations(filtered_string_in, 'in')
+    
+    return jsonify({"status": "success", "data": filtered_string_in})
+
+@app.route('/api/send_text_in', methods=['POST'])
+def send_text_in():
+    global license_plate_string
+    if license_plate_string:
+        user = User.query.filter_by(license_phate=license_plate_string).first()
+        if user:
+            print("Debug: Entering send_text_in route")
+            print(license_plate_string)
+            return jsonify({"status": "success"})
+        else:
+            return jsonify({"status": "failure_nodata", "error": "License plate not found. Confirm to proceed."})
+    else:
+        print("Debug: license_plate_string is not set")
+        return jsonify({"status": "failure", "error": "No license plate string available"}), 400
+    
+
+@app.route('/api/confirm_send_text_in', methods=['POST'])
+def confirm_send_text_in():
+    global license_plate_string
+    print("Debug: Entering confirm_send_text_in route")
+    if license_plate_string:
+        send_text_and_signal_to_raspi(license_plate_string)
+        print("Debug: license_plate_string sent to raspi", license_plate_string)
+        return jsonify({"status": "success"})
+    else:
+        return jsonify({"status": "failure", "error": "No license plate string available"}), 400
+    
+
+@app.route('/api/video/out', methods=['GET'])
+def video_out():
+    global license_plate_string_out
+    img_url_out = "http://pi:8080/?action=snapshot.jpg"
+    with open("static/cropped_image_out.jpg", 'rb') as f:
+        image_data = f.read()
+    try:
+        
+        filtered_string_out = fetch_and_process_image(img_url_out, ('pi', '1'), model, 'pi')
+    except Exception as exc:
+        print(f"out generated an exception: {exc}")
+        filtered_string_out = None
+    id = ""
+    name = ""
+    department = ""
+
+    if filtered_string_out:
+        license_plate_string_out = filtered_string_out
+        
+        id, name, department = process_db_operations(filtered_string_out, 'out')
+
+    return jsonify({"status": "success", "data": filtered_string_out, "id": id, "name": name, "department": department})
+
+@app.route('/api/send_text_out', methods=['POST'])
+def send_text_out():
+    global license_plate_string_out
+    if license_plate_string_out:
+        send_text_and_signal_to_raspi1(license_plate_string_out)
+        return jsonify({"status": "success"})
+    else:
+        print("Debug: license_plate_string is not set")
+        return jsonify({"status": "failure", "error": "No license plate string available"}), 400
+
+@app.route('/api/video', methods=['GET', 'POST'])
+def video():
     img_url_in = "http://ras:8080/?action=snapshot.jpg"
     try:
        filtered_string_in = fetch_and_process_image(img_url_in, ('ras', '1'), model, 'ras')
@@ -323,46 +480,8 @@ def video_in():
     except Exception as exc:
         print(f"in generated an exception: {exc}")
         filtered_string_in = None
-
-    print("+++++++++++++++++++++++++++++++++++++++++++++++")
-    print(filtered_string_in)
-    print("+++++++++++++++++++++++++++++++++++++++++++++++")
-
-    if filtered_string_in:
-        send_thread = threading.Thread(target=send_text_and_signal_to_raspi, args=(filtered_string_in,))
-        send_thread.start()
-        process_db_operations(filtered_string_in, 'in')
-        send_thread.join()
-    return jsonify({"status": "success", "data": filtered_string_in})
-
-@app.route('/api/video/out', methods=['GET'])
-def video_out():
-    img_url_out = "http://pi:8080/?action=snapshot.jpg"
-    with open("static/cropped_image_out.jpg", 'rb') as f:
-        image_data = f.read()
-    try:
-        filtered_string_out = fetch_and_process_image(img_url_out, ('pi', '1'), model, 'pi')
-    except Exception as exc:
-        print(f"out generated an exception: {exc}")
-        filtered_string_out = None
-
-    print("+++++++++++++++++++++++++++++++++++++++++++++++")
-    print(filtered_string_out)
-    print("+++++++++++++++++++++++++++++++++++++++++++++++")
-
-    id = ""
-    name = ""
-    department = ""
-
-    if filtered_string_out:
-        send_text_and_signal_to_raspi1(filtered_string_out)
-        id, name, department = process_db_operations(filtered_string_out, 'out')
-
-    return jsonify({"status": "success", "data": filtered_string_out, "id": id, "name": name, "department": department})
-
-@app.route('/api/video', methods=['GET', 'POST'])
-def video():
-    return render_template('test.html')
+        
+    return render_template('test.html', filtered_string_in = filtered_string_in)
 
 def process_image(model, image, source):
     mytext = ""
