@@ -305,10 +305,10 @@ def get_total_obstacles():
     for pi_id in sensor_data:
         
         for sensor_id in sensor_data[pi_id]:
-            # print(pi_id)
-            # print(sensor_id)
-            # print(sensor_data[pi_id][sensor_id])
-            # print("______________________________________")
+            print(pi_id)
+            print(sensor_id)
+            print(sensor_data[pi_id][sensor_id])
+            print("______________________________________")
             if sensor_data[pi_id][sensor_id] is None or sensor_data[pi_id][sensor_id] == 1:
                 total_obstacles += 1
     # print(total_obstacles)

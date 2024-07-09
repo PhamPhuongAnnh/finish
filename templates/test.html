@@ -411,7 +411,7 @@
             // Gọi hàm lần đầu tiên để tải nội dung ngay khi trang được tải
             updateSpaces();
             let flag = 0;
-
+            
             function callSendTextApi() {
                 fetch('/api/send_text_in', {
                     method: 'POST',
@@ -422,12 +422,16 @@
                 })
                     .then(response => response.json())
                     .then(data => {
+                        
                         if (data.status === "success") {
                             console.log('Success:', data);
                             confirmSendTextApi();  // Automatically confirm if success
+                            console.log(flag)
                             flag = 0;
+                            console.log(flag)
+                            //alert(flag)
                         } else if (data.status === "failure_nodata") {
-                            //alert("oki")
+                           // alert(flag)
                             if (flag == 0) {
                                 console.error('Failure:', data);
                                 // document.getElementById('result').innerText = "Failure: " + (data.error || "Unknown error");
